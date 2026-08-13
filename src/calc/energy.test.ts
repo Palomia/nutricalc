@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { bmrMifflinStJeor, tdee } from "./energy";
+import { bmrMifflinStJeor, energyTarget, tdee } from "./energy";
 import { ACTIVITY_LEVELS, type Profile } from "./profile";
 
-const male: Profile = { sex: "male", ageYears: 30, weightKg: 80, heightCm: 180, activity: "moderate" };
-const female: Profile = { sex: "female", ageYears: 30, weightKg: 65, heightCm: 165, activity: "moderate" };
+const male: Profile = { sex: "male", ageYears: 30, weightKg: 80, heightCm: 180, activity: "moderate", goal: "active" };
+const female: Profile = { sex: "female", ageYears: 30, weightKg: 65, heightCm: 165, activity: "moderate", goal: "active" };
 
 describe("energy", () => {
   it("BMR homme (valeur de référence)", () => {
@@ -17,7 +17,7 @@ describe("energy", () => {
   });
 
   it("homme > femme, tout égal par ailleurs", () => {
-    const common = { ageYears: 40, weightKg: 70, heightCm: 170, activity: "moderate" } as const;
+    const common = { ageYears: 40, weightKg: 70, heightCm: 170, activity: "moderate", goal: "active" } as const;
     expect(bmrMifflinStJeor({ sex: "male", ...common })).toBeGreaterThan(
       bmrMifflinStJeor({ sex: "female", ...common }),
     );
@@ -32,5 +32,30 @@ describe("energy", () => {
     const values = levels.map((activity) => tdee({ ...female, activity }));
     const sorted = [...values].sort((a, b) => a - b);
     expect(values).toEqual(sorted);
+  });
+
+  it("objectif de maintien : calories = TDEE", () => {
+    const e = energyTarget({ ...male, goal: "active" });
+    expect(e.goal).toBe("maintenance");
+    expect(e.adjustmentKcal).toBe(0);
+    expect(e.energyKcal).toBeCloseTo(tdee(male), 6);
+  });
+
+  it("prise de masse : surplus de 300 kcal (cible)", () => {
+    const t = tdee(male);
+    const e = energyTarget({ ...male, goal: "muscleGain" }, t);
+    expect(e.goal).toBe("surplus");
+    expect(e.adjustmentKcal).toBe(300);
+    expect(e.energyKcal).toBeCloseTo(t + 300, 6);
+    expect(e.energyMinKcal).toBeCloseTo(t + 200, 6);
+    expect(e.energyMaxKcal).toBeCloseTo(t + 400, 6);
+  });
+
+  it("sèche avancée : déficit sous le TDEE", () => {
+    const t = tdee(male);
+    const e = energyTarget({ ...male, goal: "aggressiveCut" }, t);
+    expect(e.goal).toBe("deficit");
+    expect(e.energyKcal).toBeLessThan(t);
+    expect(e.adjustmentKcal).toBe(-750);
   });
 });

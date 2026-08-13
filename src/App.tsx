@@ -1,6 +1,13 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { dailyReport } from "./calc/report";
-import { ACTIVITY_LEVELS, type ActivityLevel, type Profile, type Sex } from "./calc/profile";
+import {
+  ACTIVITY_LEVELS,
+  NUTRITION_PROFILES,
+  type ActivityLevel,
+  type NutritionGoal,
+  type Profile,
+  type Sex,
+} from "./calc/profile";
 import type { CarbComponent, FattyAcidTarget, MacroTarget } from "./calc/macros";
 
 const ACTIVITY_LABELS: Record<ActivityLevel, string> = {
@@ -11,8 +18,24 @@ const ACTIVITY_LABELS: Record<ActivityLevel, string> = {
   veryActive: "Très intense",
 };
 
+const GOAL_KEYS = Object.keys(NUTRITION_PROFILES) as NutritionGoal[];
+
 const round = (n: number) => Math.round(n);
 const one = (n: number) => Math.round(n * 10) / 10;
+
+// Ajustement calorique de l'objectif, relatif au TDEE.
+function fmtAdjustment(kcal: number): string {
+  if (kcal === 0) return "maintien";
+  return kcal > 0 ? `surplus +${round(kcal)} kcal` : `déficit ${round(kcal)} kcal`;
+}
+
+// Ligne « fourchette » sous chaque macro : plage en grammes et ratio g/kg, ou
+// mention « reste des calories » quand le profil ne fixe pas de ratio glucides.
+function fmtMacroRange(t: MacroTarget): string {
+  if (t.gramsMin === null || t.gramsMax === null || t.gPerKg === null)
+    return "reste des calories";
+  return `${round(t.gramsMin)}–${round(t.gramsMax)} g · ${t.gPerKg} g/kg`;
+}
 
 function fmtFattyAcid(fa: FattyAcidTarget): string {
   if (fa.milligrams !== null) return `${fa.milligrams} mg/j`;
@@ -111,6 +134,7 @@ function MacroRow(props: { label: string; bar: string; target: MacroTarget; chil
       <div className="h-2 overflow-hidden rounded-full bg-slate-100">
         <div className={"h-full rounded-full " + bar} style={{ width: `${target.percentAet * 100}%` }} />
       </div>
+      <p className="mt-1 text-xs text-slate-400">Fourchette : {fmtMacroRange(target)}</p>
       {children}
     </div>
   );
@@ -123,6 +147,7 @@ export function App() {
     weightKg: 65,
     heightCm: 168,
     activity: "moderate",
+    goal: "active",
   });
 
   const set = <K extends keyof Profile>(key: K, value: Profile[K]) =>
@@ -142,8 +167,8 @@ export function App() {
         <header className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight">nutricalc</h1>
           <p className="mt-1 text-slate-600">
-            Apports journaliers recommandés — énergie, macronutriments et micronutriments
-            (références ANSES).
+            Apports journaliers recommandés selon votre profil et votre objectif — énergie,
+            macronutriments et micronutriments (références ANSES).
           </p>
         </header>
 
@@ -186,6 +211,21 @@ export function App() {
               </select>
             </label>
 
+            <label className="flex flex-col gap-1 text-sm sm:col-span-2">
+              <span className="font-medium text-slate-700">Objectif</span>
+              <select
+                className="rounded-lg border border-slate-300 px-3 py-2 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                value={profile.goal}
+                onChange={(e) => set("goal", e.target.value as NutritionGoal)}
+              >
+                {GOAL_KEYS.map((g) => (
+                  <option key={g} value={g}>
+                    {NUTRITION_PROFILES[g].label} — {NUTRITION_PROFILES[g].description}
+                  </option>
+                ))}
+              </select>
+            </label>
+
             <NumberField label="Âge" value={profile.ageYears} min={18} max={120} unit="ans"
               onChange={(v) => set("ageYears", v)} />
             <NumberField label="Poids" value={profile.weightKg} min={1} max={400} unit="kg"
@@ -200,16 +240,31 @@ export function App() {
         ) : (
           result.report && (
             <>
-              <section className="mt-6 grid grid-cols-2 gap-4">
+              <section className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                   <p className="text-sm text-slate-500">Métabolisme de base</p>
                   <p className="mt-1 text-2xl font-bold">{round(result.report.bmrKcal)} <span className="text-base font-normal text-slate-400">kcal/j</span></p>
                 </div>
+                <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                  <p className="text-sm text-slate-500">Dépense totale (TDEE)</p>
+                  <p className="mt-1 text-2xl font-bold">{round(result.report.tdeeKcal)} <span className="text-base font-normal text-slate-400">kcal/j</span></p>
+                </div>
                 <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 shadow-sm">
-                  <p className="text-sm text-emerald-700">Besoin énergétique</p>
+                  <p className="text-sm text-emerald-700">Calories cibles</p>
                   <p className="mt-1 text-2xl font-bold text-emerald-800">{round(result.report.energyKcal)} <span className="text-base font-normal text-emerald-600">kcal/j</span></p>
+                  <p className="mt-1 text-xs text-emerald-700">
+                    {fmtAdjustment(result.report.energy.adjustmentKcal)} · {round(result.report.energy.energyMinKcal)}–{round(result.report.energy.energyMaxKcal)} kcal/j
+                  </p>
                 </div>
               </section>
+
+              {result.report.weightAdjusted && (
+                <p className="mt-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                  IMC {one(result.report.bmi)} — les macros en g/kg sont calculées sur un
+                  poids ajusté de {one(result.report.effectiveWeightKg)} kg (au lieu de{" "}
+                  {one(result.report.profile.weightKg)} kg) pour ne pas surdoser sur la masse grasse.
+                </p>
+              )}
 
               <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <h2 className="mb-4 text-lg font-semibold">Macronutriments</h2>
