@@ -613,11 +613,16 @@ export function App() {
                 </div>
               </section>
 
-              <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h2 className="mb-4 text-lg font-semibold">Micronutriments</h2>
-                <div className="grid grid-cols-1 gap-x-8 gap-y-1 sm:grid-cols-2">
+              <details className="group mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <summary className="flex cursor-pointer items-center justify-between text-lg font-semibold">
+                  <span>Micronutriments (références ANSES)</span>
+                  <span className="text-sm font-normal text-slate-400 transition-transform group-open:rotate-180">
+                    ▾
+                  </span>
+                </summary>
+                <div className="mt-4 grid grid-cols-1 gap-x-8 gap-y-0.5 sm:grid-cols-2 lg:grid-cols-3">
                   {result.report.micros.map((micro) => (
-                    <div key={micro.name} className="flex items-baseline justify-between border-b border-slate-100 py-1.5 text-sm">
+                    <div key={micro.name} className="flex items-baseline justify-between border-b border-slate-100 py-1 text-sm">
                       {MICRO_TIPS[micro.name] ? (
                         <NameWithTip name={micro.name} tip={MICRO_TIPS[micro.name]} />
                       ) : (
@@ -625,7 +630,7 @@ export function App() {
                       )}
                       <span className="tabular-nums text-slate-900">
                         {one(micro.amount)} {micro.unit}
-                        <span className="ml-2 text-xs text-slate-400">{micro.kind}</span>
+                        <span className="ml-1 text-xs text-slate-400">{micro.kind}</span>
                       </span>
                     </div>
                   ))}
@@ -634,7 +639,7 @@ export function App() {
                   Valeurs indicatives (références ANSES, RNP/AS ; acides aminés FAO/OMS), à
                   revalider. Outil informatif — ne remplace pas un avis médical ou diététique.
                 </p>
-              </section>
+              </details>
 
               <MealPlanner
                 target={{
