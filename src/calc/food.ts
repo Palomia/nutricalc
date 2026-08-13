@@ -111,6 +111,13 @@ export const FOODS: Food[] = [
   // Matières grasses & oléagineux
   { id: "huile-olive", name: "Huile d'olive", category: "Matières grasses & oléagineux", kcalPer100g: 900, proteinPer100g: 0, lipidPer100g: 100, carbPer100g: 0, vegetarian: true, vegan: true, unprocessed: false },
   { id: "amandes", name: "Amandes", category: "Matières grasses & oléagineux", kcalPer100g: 630, proteinPer100g: 21.1, lipidPer100g: 53.4, carbPer100g: 7.9, aaProfile: "nuts", proteinQuality: "faible", vegetarian: true, vegan: true, unprocessed: true },
+  // Matière grasse laitière : végétarienne mais non vegan. Valeurs CIQUAL
+  // indicatives (~717 kcal, 0,7 g prot, 81 g lip, 0,6 g gluc /100 g).
+  { id: "beurre", name: "Beurre", category: "Matières grasses & oléagineux", kcalPer100g: 717, proteinPer100g: 0.7, lipidPer100g: 81, carbPer100g: 0.6, vegetarian: true, vegan: false, unprocessed: false },
+  // Condiments pour la vinaigrette. Valeurs CIQUAL indicatives, protéines
+  // négligeables (pas de découpage AAE).
+  { id: "vinaigre", name: "Vinaigre", category: "Matières grasses & oléagineux", kcalPer100g: 20, proteinPer100g: 0, lipidPer100g: 0, carbPer100g: 0.6, vegetarian: true, vegan: true, unprocessed: false },
+  { id: "moutarde", name: "Moutarde", category: "Matières grasses & oléagineux", kcalPer100g: 150, proteinPer100g: 6, lipidPer100g: 10, carbPer100g: 6, vegetarian: true, vegan: true, unprocessed: false },
 ];
 
 export const FOODS_BY_ID: Record<string, Food> = Object.fromEntries(

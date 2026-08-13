@@ -39,6 +39,13 @@ import {
   fromSavedDish,
 } from "./calc/storage";
 import type { EMeal, EIngredient, SavedMeal, SavedDish } from "./calc/storage";
+import {
+  COOKING_METHODS,
+  cookingIngredients,
+  VINAIGRETTE,
+  type ComboIngredient,
+  type CookingMethod,
+} from "./calc/cooking";
 
 // Cible de comparaison, en valeurs absolues journalières.
 export interface MacroGoal {
@@ -351,6 +358,37 @@ function LibraryMenu(props: {
   );
 }
 
+// Menu « Cuisson » : matière grasse ajoutée au plat (tâche #10). « À sec »
+// n'ajoute rien. Reprend l'esthétique <details> des autres menus.
+function CookingMenu({ onSelect }: { onSelect: (method: CookingMethod) => void }) {
+  return (
+    <details className="group relative">
+      <summary className="cursor-pointer list-none text-xs text-emerald-700 hover:underline">
+        Cuisson
+      </summary>
+      <div className="absolute left-0 z-10 mt-1 w-40 rounded-lg border border-slate-200 bg-white p-1 shadow-lg">
+        <ul className="space-y-0.5">
+          {COOKING_METHODS.map(({ method, label }) => (
+            <li key={method}>
+              <button
+                type="button"
+                onClick={(e) => {
+                  onSelect(method);
+                  // Referme le menu <details> après le choix.
+                  e.currentTarget.closest("details")?.removeAttribute("open");
+                }}
+                className="w-full rounded px-2 py-1 text-left text-sm text-slate-700 hover:bg-emerald-50 hover:text-emerald-700"
+              >
+                {label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </details>
+  );
+}
+
 export function MealPlanner({ target, muscleTargets }: { target?: MacroGoal; muscleTargets?: MuscleTargets }) {
   // Journée en cours restaurée depuis localStorage (état vide si absent/invalide).
   const [meals, setMeals] = useState<EMeal[]>(() => deserializeDay(loadRaw(DAY_KEY)));
@@ -454,6 +492,32 @@ export function MealPlanner({ target, muscleTargets }: { target?: MacroGoal; mus
           : m,
       ),
     );
+
+  // Ajout groupé d'ingrédients préréglés (cuisson / vinaigrette). Chaque item
+  // reçoit un id d'édition frais ; « à sec » (liste vide) ne change rien.
+  const addIngredients = (mealId: number, dishId: number, items: ComboIngredient[]) => {
+    if (items.length === 0) return;
+    setMeals((ms) =>
+      ms.map((m) =>
+        m.id === mealId
+          ? {
+              ...m,
+              dishes: m.dishes.map((d) =>
+                d.id === dishId
+                  ? {
+                      ...d,
+                      ingredients: [
+                        ...d.ingredients,
+                        ...items.map((it) => ({ id: id(), foodId: it.foodId, grams: it.grams })),
+                      ],
+                    }
+                  : d,
+              ),
+            }
+          : m,
+      ),
+    );
+  };
 
   const removeIngredient = (mealId: number, dishId: number, ingId: number) =>
     setMeals((ms) =>
@@ -649,13 +713,25 @@ export function MealPlanner({ target, muscleTargets }: { target?: MacroGoal; mus
                               </button>
                             </div>
                           ))}
-                          <button
-                            type="button"
-                            onClick={() => addIngredient(meal.id, dish.id)}
-                            className="text-xs text-emerald-700 hover:underline"
-                          >
-                            + Ajouter un ingrédient
-                          </button>
+                          <div className="flex flex-wrap items-center gap-3">
+                            <button
+                              type="button"
+                              onClick={() => addIngredient(meal.id, dish.id)}
+                              className="text-xs text-emerald-700 hover:underline"
+                            >
+                              + Ajouter un ingrédient
+                            </button>
+                            <CookingMenu
+                              onSelect={(method) => addIngredients(meal.id, dish.id, cookingIngredients(method))}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => addIngredients(meal.id, dish.id, VINAIGRETTE)}
+                              className="text-xs text-emerald-700 hover:underline"
+                            >
+                              + Vinaigrette
+                            </button>
+                          </div>
                         </div>
                       </div>
                     );
