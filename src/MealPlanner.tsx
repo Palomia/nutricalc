@@ -210,7 +210,7 @@ const LEUCINE_ANABOLIC_TIP: InfoTipContent = {
     {
       heading: "Un seuil à atteindre par repas",
       items: [
-        "Il faut ~2 à 3 g de leucine (optimal ~2,5 g) et ~25 à 40 g de protéines de qualité dans une même prise pour déclencher un pic anabolique.",
+        "Il faut ~2 à 3 g de leucine (optimal ~2,5 g) et ~25 à 40 g de protéines dans une même prise pour déclencher un pic anabolique.",
         "En dessous du seuil, la MPS n'est stimulée que partiellement.",
       ],
     },
@@ -232,6 +232,30 @@ const LEUCINE_ANABOLIC_TIP: InfoTipContent = {
   ],
 };
 
+// Encart « Origine animale vs végétale » : pourquoi l'outil n'accorde AUCUNE
+// prime à l'origine animale (la qualité est déjà captée par l'AA limitant).
+const ANIMAL_VS_PLANT_TIP: InfoTipContent = {
+  intro:
+    "Animal ou végétal : à apports équilibrés, l'écart de « qualité » protéique est faible et déjà pris en compte ailleurs dans l'outil.",
+  sections: [
+    {
+      heading: "L'écart, en pratique",
+      items: [
+        "Les protéines animales sont en moyenne un peu mieux digérées et plus riches en leucine (indices DIAAS/PDCAAS plus élevés).",
+        "Végétales variées et suffisantes en lysine (légumineuses + céréales), l'écart s'efface largement.",
+      ],
+    },
+    {
+      heading: "Pourquoi aucune prime animale",
+      items: [
+        "L'acide aminé limitant mesure déjà la couverture réelle en AAE de la journée.",
+        "Classer les sources animales « au-dessus » ferait donc doublon et introduirait un biais.",
+        "Repères indicatifs (DIAAS/FAO), pas une prescription.",
+      ],
+    },
+  ],
+};
+
 // Ligne sous-score du score musculaire (part pondérée, 0-1).
 function SubScore({ label, value, weight }: { label: string; value: number; weight: number }) {
   return (
@@ -248,7 +272,7 @@ function SubScore({ label, value, weight }: { label: string; value: number; weig
 }
 
 function MuscleAnalysisPanel({ analysis }: { analysis: MuscleAnalysis }) {
-  const { score, limiting, distribution, quality, aminoAcids } = analysis;
+  const { score, limiting, distribution, aminoAcids } = analysis;
   const style = BAND_STYLE[score.band];
   return (
     <div className="mt-6 space-y-4">
@@ -326,23 +350,21 @@ function MuscleAnalysisPanel({ analysis }: { analysis: MuscleAnalysis }) {
         </div>
       )}
 
-      {/* Qualité protéique (§11) */}
-      <div className="rounded-xl border border-slate-200 bg-white p-4">
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
-            Qualité protéique
-          </span>
-          <span className="font-semibold tabular-nums text-slate-800">
-            {round(quality.score)} / 100
-          </span>
-        </div>
-        <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
-          <div className="h-full rounded-full bg-indigo-500" style={{ width: `${quality.score}%` }} />
-        </div>
-        <p className="mt-1 text-xs text-slate-400">
-          Moyenne des sources protéiques pondérée par les grammes (œufs/laitages/
-          poisson/viande &gt; soja &gt; légumineuses &gt; céréales).
+      {/* Origine animale vs végétale : encart pédagogique (remplace l'ancien
+          score « qualité protéique », jugé redondant avec l'AA limitant). */}
+      <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+        <p className="inline-flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-slate-500">
+          Origine animale vs végétale
+          <InfoTip label="En savoir plus sur l'origine des protéines" tip={ANIMAL_VS_PLANT_TIP} />
         </p>
+        <p className="mt-1 text-xs leading-relaxed text-slate-500">
+          En moyenne, les protéines animales sont un peu mieux valorisées
+          (meilleure digestibilité, plus de leucine). Mais avec de bons apports en
+          lysine et des sources variées et équilibrées, cet écart s'efface. Comme
+          l'outil évalue déjà l'acide aminé limitant, aucune prime n'est accordée à
+          l'origine animale.
+        </p>
+        <p className="mt-1 text-[10px] text-slate-400">Repères indicatifs (DIAAS/FAO).</p>
       </div>
 
       {/* Leucine et distribution par repas (§9-10) */}
@@ -367,7 +389,7 @@ function MuscleAnalysisPanel({ analysis }: { analysis: MuscleAnalysis }) {
                   {m.isAnabolicPeak && <span className="ml-1 text-emerald-500" title="Pic anabolique (≥ 25 g)">●</span>}
                 </span>
                 <span className="tabular-nums text-slate-500">
-                  {one(m.qualityProteinG)} g qualité · leucine {one(m.leucineG)} g
+                  {one(m.totalProteinG)} g protéines · leucine {one(m.leucineG)} g
                   <span className={"ml-2 " + leu.cls}>{leu.label}</span>
                 </span>
               </div>
@@ -375,7 +397,7 @@ function MuscleAnalysisPanel({ analysis }: { analysis: MuscleAnalysis }) {
           })}
         </div>
         <p className="mt-2 text-xs text-slate-400">
-          Cible : 25-40 g de protéines de qualité par prise et ≥ 2 g de leucine
+          Cible : 25-40 g de protéines par prise et ≥ 2 g de leucine
           (optimal 2,5 g). 3 à 5 pics anaboliques dans la journée = bonus.
         </p>
       </div>

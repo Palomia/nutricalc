@@ -7,7 +7,6 @@ import {
   limitingAminoAcid,
   aminoAcidCoverage,
   proteinDistribution,
-  proteinQualityScore,
   type MuscleTargets,
 } from "./aminoAcids";
 import { AMINO_ACID_PROFILES, type Food } from "./food";
@@ -18,18 +17,26 @@ import type { Day } from "./intake";
 const chicken: Food = {
   id: "poulet", name: "Poulet", category: "Viandes, poissons, œufs",
   kcalPer100g: 137, proteinPer100g: 30, lipidPer100g: 2, carbPer100g: 0,
-  aaProfile: "meat", proteinQuality: "excellent",
+  aaProfile: "meat",
   vegetarian: false, vegan: false, unprocessed: true,
 };
 const rice: Food = {
   id: "riz", name: "Riz", category: "Féculents & pains",
   kcalPer100g: 143, proteinPer100g: 2.9, lipidPer100g: 0.4, carbPer100g: 32,
-  aaProfile: "cereal", proteinQuality: "faible",
+  aaProfile: "cereal",
   vegetarian: true, vegan: true, unprocessed: true,
 };
 const apple: Food = {
   id: "pomme", name: "Pomme", category: "Fruits & légumes",
   kcalPer100g: 52, proteinPer100g: 0.3, lipidPer100g: 0.3, carbPer100g: 11.6,
+  vegetarian: true, vegan: true, unprocessed: true,
+};
+// Source protéique végétale à teneur comparable au poulet, pour vérifier
+// l'absence de prime à l'origine animale (même quantité → même traitement).
+const tofu: Food = {
+  id: "tofu", name: "Tofu", category: "Féculents & pains",
+  kcalPer100g: 145, proteinPer100g: 30, lipidPer100g: 8, carbPer100g: 2,
+  aaProfile: "soy",
   vegetarian: true, vegan: true, unprocessed: true,
 };
 
@@ -108,15 +115,24 @@ describe("distribution des protéines (§10)", () => {
   });
 });
 
-describe("qualité protéique (§11)", () => {
-  it("100 % de protéines excellentes → score 100", () => {
-    const day: Day = { meals: [{ name: "R", dishes: [dishOf(chicken, 100)] }] };
-    expect(proteinQualityScore(day).score).toBeCloseTo(100, 6);
+describe("pas de prime à l'origine animale (§10)", () => {
+  it("à protéines totales égales, animal et végétal donnent le même pic anabolique", () => {
+    // 100 g de poulet et 100 g de tofu → 30 g de protéines chacun.
+    const animal: Day = { meals: [{ name: "R", dishes: [dishOf(chicken, 100)] }] };
+    const plant: Day = { meals: [{ name: "R", dishes: [dishOf(tofu, 100)] }] };
+    const da = proteinDistribution(animal);
+    const dp = proteinDistribution(plant);
+    expect(da.meals[0].totalProteinG).toBeCloseTo(dp.meals[0].totalProteinG, 6);
+    expect(dp.meals[0].isAnabolicPeak).toBe(da.meals[0].isAnabolicPeak);
+    expect(dp.meals[0].isAnabolicPeak).toBe(true);
+    expect(dp.peaks).toBe(da.peaks);
   });
 
-  it("les céréales seules tirent le score vers le bas", () => {
-    const day: Day = { meals: [{ name: "R", dishes: [dishOf(rice, 300)] }] };
-    expect(proteinQualityScore(day).score).toBeLessThan(50);
+  it("le pic anabolique se déclenche au seuil de protéines TOTALES (25 g)", () => {
+    const under: Day = { meals: [{ name: "R", dishes: [dishOf(tofu, 80)] }] }; // 24 g
+    const over: Day = { meals: [{ name: "R", dishes: [dishOf(tofu, 90)] }] }; // 27 g
+    expect(proteinDistribution(under).meals[0].isAnabolicPeak).toBe(false);
+    expect(proteinDistribution(over).meals[0].isAnabolicPeak).toBe(true);
   });
 });
 

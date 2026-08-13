@@ -10,11 +10,7 @@
 //
 // Toutes les valeurs sont INDICATIVES et pédagogiques (cf. profils d'AAE dans
 // food.ts) ; le moteur est pragmatique, pas une référence clinique.
-import {
-  AMINO_ACID_PROFILES,
-  PROTEIN_QUALITY_SCORE,
-  type ProteinQualityTier,
-} from "./food";
+import { AMINO_ACID_PROFILES } from "./food";
 import type { AminoAcid, AminoAcidKey } from "./macros";
 import { dayMacros, mealMacros, type Day, type Ingredient, type Meal } from "./intake";
 
@@ -43,15 +39,6 @@ function zeroAminoAcids(): AminoAcidAmounts {
 // Grammes de protéines apportés par un ingrédient (règle de trois sur 100 g).
 function ingredientProteinG(i: Ingredient): number {
   return (i.food.proteinPer100g * i.grams) / 100;
-}
-
-// Poids « protéine utile à l'anabolisme » d'un tier de qualité (temp.txt §11) :
-// score/100. Les aliments sans tier (fruits, légumes aqueux) apportent une
-// protéine de faible valeur, pondérée à part.
-const UNSCORED_QUALITY_WEIGHT = 0.2;
-
-function qualityWeight(tier: ProteinQualityTier | undefined): number {
-  return tier ? PROTEIN_QUALITY_SCORE[tier] / 100 : UNSCORED_QUALITY_WEIGHT;
 }
 
 // mg d'AAE apportés par un ingrédient : profil de la source (mg/g de protéine)
@@ -137,40 +124,37 @@ export function leucineLevel(leucineG: number): LeucineLevel {
   return "excellent";
 }
 
-// Fenêtre de « protéines de qualité » par prise (temp.txt §10).
+// Fenêtre de protéines par prise (temp.txt §10). Le pic anabolique est jugé sur
+// les protéines TOTALES du repas : aucune prime n'est accordée à l'origine
+// animale (la qualité est déjà captée par l'acide aminé limitant, cf. §8).
 export const PROTEIN_PER_MEAL = { min: 25, max: 40 } as const;
 
 export interface MealMuscle {
   name: string;
   totalProteinG: number;
-  qualityProteinG: number; // protéines pondérées par la qualité de leur source
   leucineG: number;
   leucineLevel: LeucineLevel;
-  isAnabolicPeak: boolean; // ≥ 25 g de protéines de qualité
-  inTargetRange: boolean; // 25-40 g de protéines de qualité
+  isAnabolicPeak: boolean; // ≥ 25 g de protéines totales
+  inTargetRange: boolean; // 25-40 g de protéines totales
 }
 
 function mealMuscle(meal: Meal): MealMuscle {
-  let qualityProteinG = 0;
-  for (const i of allIngredients(meal))
-    qualityProteinG += ingredientProteinG(i) * qualityWeight(i.food.proteinQuality);
   const totalProteinG = mealMacros(meal).proteinG;
   const leucineG = mealAminoAcids(meal).leucine / 1000;
   return {
     name: meal.name,
     totalProteinG,
-    qualityProteinG,
     leucineG,
     leucineLevel: leucineLevel(leucineG),
-    isAnabolicPeak: qualityProteinG >= PROTEIN_PER_MEAL.min,
+    isAnabolicPeak: totalProteinG >= PROTEIN_PER_MEAL.min,
     inTargetRange:
-      qualityProteinG >= PROTEIN_PER_MEAL.min && qualityProteinG <= PROTEIN_PER_MEAL.max,
+      totalProteinG >= PROTEIN_PER_MEAL.min && totalProteinG <= PROTEIN_PER_MEAL.max,
   };
 }
 
 export interface DistributionResult {
   meals: MealMuscle[];
-  peaks: number; // nombre de prises ≥ 25 g de protéines de qualité
+  peaks: number; // nombre de prises ≥ 25 g de protéines totales
   bonus: boolean; // 3 à 5 pics anaboliques dans la journée (temp.txt §10)
 }
 
@@ -178,29 +162,6 @@ export function proteinDistribution(day: Day): DistributionResult {
   const meals = day.meals.map(mealMuscle);
   const peaks = meals.filter((m) => m.isAnabolicPeak).length;
   return { meals, peaks, bonus: peaks >= 3 && peaks <= 5 };
-}
-
-// --- §11 : score de qualité protéique (0-100) ---
-
-export interface ProteinQualityResult {
-  score: number; // moyenne des tiers pondérée par les grammes de protéines
-  scoredProteinG: number; // protéines rattachées à un tier (base du calcul)
-}
-
-export function proteinQualityScore(day: Day): ProteinQualityResult {
-  let weighted = 0;
-  let scoredProteinG = 0;
-  for (const m of day.meals)
-    for (const i of allIngredients(m)) {
-      if (!i.food.proteinQuality) continue;
-      const g = ingredientProteinG(i);
-      weighted += g * PROTEIN_QUALITY_SCORE[i.food.proteinQuality];
-      scoredProteinG += g;
-    }
-  return {
-    score: scoredProteinG > 0 ? weighted / scoredProteinG : 0,
-    scoredProteinG,
-  };
 }
 
 // --- §12 : score de construction musculaire (0-100) ---
@@ -249,7 +210,6 @@ export interface MuscleAnalysis {
   aminoAcids: AminoAcidCoverage[]; // couverture par AAE
   limiting: AminoAcidCoverage | null; // acide aminé limitant
   distribution: DistributionResult; // leucine par repas + répartition
-  quality: ProteinQualityResult; // score qualité protéique
   score: MuscleScore; // score final
 }
 
@@ -262,8 +222,6 @@ export function analyzeMuscleProfile(day: Day, targets: MuscleTargets): MuscleAn
   const limiting = limitingAminoAcid(coverage);
   // 5. Leucine par repas + 7. répartition des protéines.
   const distribution = proteinDistribution(day);
-  // 6. Qualité protéique.
-  const quality = proteinQualityScore(day);
 
   // 8. Score final (temp.txt §12).
   const proteinScore =
@@ -299,7 +257,6 @@ export function analyzeMuscleProfile(day: Day, targets: MuscleTargets): MuscleAn
     aminoAcids: coverage,
     limiting,
     distribution,
-    quality,
     score: {
       total,
       band: band(total),
