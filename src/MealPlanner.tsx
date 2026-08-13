@@ -47,6 +47,7 @@ import {
   type CookingMethod,
 } from "./calc/cooking";
 import { buildPresetDay } from "./calc/presetDay";
+import { toGrams, UNITS, UNIT_LABELS, DEFAULT_UNIT } from "./calc/units";
 
 // Cible de comparaison, en valeurs absolues journalières.
 export interface MacroGoal {
@@ -86,7 +87,9 @@ function toDay(meals: EMeal[]): Day {
       dishes: m.dishes.map((d) => ({
         name: d.name,
         ingredients: d.ingredients
-          .map((i) => ({ food: FOODS_BY_ID[i.foodId], grams: i.grams }))
+          // La quantité saisie (dans son unité ménagère) est convertie en
+          // grammes ici, pour qu'intake.ts reste une simple règle de trois.
+          .map((i) => ({ food: FOODS_BY_ID[i.foodId], grams: toGrams(i.quantity, i.unit) }))
           .filter((i) => i.food !== undefined),
       })),
     })),
@@ -495,7 +498,7 @@ export function MealPlanner({ target, muscleTargets }: { target?: MacroGoal; mus
               ...m,
               dishes: m.dishes.map((d) =>
                 d.id === dishId
-                  ? { ...d, ingredients: [...d.ingredients, { id: id(), foodId: (filteredFoods[0] ?? FOODS[0]).id, grams: 100 }] }
+                  ? { ...d, ingredients: [...d.ingredients, { id: id(), foodId: (filteredFoods[0] ?? FOODS[0]).id, quantity: 100, unit: DEFAULT_UNIT }] }
                   : d,
               ),
             }
@@ -518,7 +521,9 @@ export function MealPlanner({ target, muscleTargets }: { target?: MacroGoal; mus
                       ...d,
                       ingredients: [
                         ...d.ingredients,
-                        ...items.map((it) => ({ id: id(), foodId: it.foodId, grams: it.grams })),
+                        // Les combos (cuisson/vinaigrette) sont exprimés en
+                        // grammes → on les insère avec l'unité « gramme ».
+                        ...items.map((it) => ({ id: id(), foodId: it.foodId, quantity: it.grams, unit: DEFAULT_UNIT })),
                       ],
                     }
                   : d,
@@ -715,11 +720,20 @@ export function MealPlanner({ target, muscleTargets }: { target?: MacroGoal; mus
                               <input
                                 type="number"
                                 min={0}
-                                value={ing.grams}
-                                onChange={(e) => setIngredient(meal.id, dish.id, ing.id, { grams: Number(e.target.value) })}
+                                value={ing.quantity}
+                                onChange={(e) => setIngredient(meal.id, dish.id, ing.id, { quantity: Number(e.target.value) })}
                                 className="w-20 rounded border border-slate-300 px-2 py-1 text-right focus:border-emerald-500 focus:outline-none"
                               />
-                              <span className="w-6 text-slate-400">g</span>
+                              <select
+                                value={ing.unit}
+                                onChange={(e) => setIngredient(meal.id, dish.id, ing.id, { unit: e.target.value as EIngredient["unit"] })}
+                                className="w-28 rounded border border-slate-300 bg-white px-2 py-1 focus:border-emerald-500 focus:outline-none"
+                                aria-label="Unité"
+                              >
+                                {UNITS.map((u) => (
+                                  <option key={u} value={u}>{UNIT_LABELS[u]}</option>
+                                ))}
+                              </select>
                               <button
                                 type="button"
                                 onClick={() => removeIngredient(meal.id, dish.id, ing.id)}

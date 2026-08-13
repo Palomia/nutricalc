@@ -23,8 +23,8 @@ const day: EMeal[] = [
         id: 5,
         name: "Bol",
         ingredients: [
-          { id: 7, foodId: "riz", grams: 150 },
-          { id: 9, foodId: "poulet", grams: 100 },
+          { id: 7, foodId: "riz", quantity: 150, unit: "gramme" },
+          { id: 9, foodId: "poulet", quantity: 1, unit: "cuillereSoupe" },
         ],
       },
     ],
@@ -64,6 +64,69 @@ describe("storage — journée en cours", () => {
   });
 });
 
+describe("storage — migration des anciennes entrées (grams → quantity/unit)", () => {
+  it("convertit un ingrédient hérité { grams } en { quantity, unit: 'gramme' }", () => {
+    // Ancien format persisté avant l'introduction des unités ménagères.
+    const legacy = JSON.stringify([
+      {
+        id: 1,
+        name: "Repas",
+        dishes: [{ id: 2, name: "Plat", ingredients: [{ id: 3, foodId: "riz", grams: 120 }] }],
+      },
+    ]);
+    expect(deserializeDay(legacy)).toEqual([
+      {
+        id: 1,
+        name: "Repas",
+        dishes: [
+          { id: 2, name: "Plat", ingredients: [{ id: 3, foodId: "riz", quantity: 120, unit: "gramme" }] },
+        ],
+      },
+    ]);
+  });
+
+  it("migre aussi les modèles enregistrés hérités { grams }", () => {
+    const legacy = JSON.stringify([
+      { name: "Modèle", dishes: [{ name: "Plat", ingredients: [{ foodId: "pain", grams: 80 }] }] },
+    ]);
+    expect(deserializeSavedMeals(legacy)).toEqual([
+      { name: "Modèle", dishes: [{ name: "Plat", ingredients: [{ foodId: "pain", quantity: 80, unit: "gramme" }] }] },
+    ]);
+  });
+
+  it("préserve le nouveau format quantity/unit s'il est présent", () => {
+    const raw = JSON.stringify([
+      {
+        id: 1,
+        name: "Repas",
+        dishes: [{ id: 2, name: "Plat", ingredients: [{ id: 3, foodId: "huile", quantity: 2, unit: "cuillereSoupe" }] }],
+      },
+    ]);
+    expect(deserializeDay(raw)).toEqual([
+      {
+        id: 1,
+        name: "Repas",
+        dishes: [
+          { id: 2, name: "Plat", ingredients: [{ id: 3, foodId: "huile", quantity: 2, unit: "cuillereSoupe" }] },
+        ],
+      },
+    ]);
+  });
+
+  it("ignore une unité inconnue et sans grams (entrée non exploitable)", () => {
+    const raw = JSON.stringify([
+      {
+        id: 1,
+        name: "Repas",
+        dishes: [{ id: 2, name: "Plat", ingredients: [{ id: 3, foodId: "x", quantity: 5, unit: "kilogramme" }] }],
+      },
+    ]);
+    expect(deserializeDay(raw)).toEqual([
+      { id: 1, name: "Repas", dishes: [{ id: 2, name: "Plat", ingredients: [] }] },
+    ]);
+  });
+});
+
 describe("storage — recalcul de nextId", () => {
   it("prend le max des ids (repas, plats, ingrédients) + 1", () => {
     expect(nextIdFrom(day)).toBe(10);
@@ -92,7 +155,7 @@ describe("storage — recalcul de nextId", () => {
 describe("storage — modèles enregistrés", () => {
   const savedMeal: SavedMeal = {
     name: "Petit-déjeuner type",
-    dishes: [{ name: "Tartines", ingredients: [{ foodId: "pain", grams: 80 }] }],
+    dishes: [{ name: "Tartines", ingredients: [{ foodId: "pain", quantity: 80, unit: "gramme" }] }],
   };
 
   it("round-trip des repas enregistrés", () => {
@@ -117,8 +180,8 @@ describe("storage — modèles enregistrés", () => {
         {
           name: "Bol",
           ingredients: [
-            { foodId: "riz", grams: 150 },
-            { foodId: "poulet", grams: 100 },
+            { foodId: "riz", quantity: 150, unit: "gramme" },
+            { foodId: "poulet", quantity: 1, unit: "cuillereSoupe" },
           ],
         },
       ],
@@ -141,7 +204,7 @@ describe("storage — modèles enregistrés", () => {
     const id = () => counter++;
     const dish = fromSavedDish(savedMeal.dishes[0], id);
     expect(dish.name).toBe("Tartines");
-    expect(dish.ingredients).toEqual([{ id: 2, foodId: "pain", grams: 80 }]);
+    expect(dish.ingredients).toEqual([{ id: 2, foodId: "pain", quantity: 80, unit: "gramme" }]);
     expect(dish.id).toBe(1);
   });
 });
