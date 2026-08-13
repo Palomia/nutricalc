@@ -734,6 +734,10 @@ export function MealPlanner({ target, muscleTargets }: { target?: MacroGoal; mus
                                   <option key={u} value={u}>{UNIT_LABELS[u]}</option>
                                 ))}
                               </select>
+                              {/* Équivalent en grammes toujours affiché (base des calculs). */}
+                              <span className="w-16 shrink-0 text-xs tabular-nums text-slate-400" title="Équivalent en grammes utilisé pour les calculs">
+                                ≈ {one(toGrams(ing.quantity, ing.unit))} g
+                              </span>
                               <button
                                 type="button"
                                 onClick={() => removeIngredient(meal.id, dish.id, ing.id)}
