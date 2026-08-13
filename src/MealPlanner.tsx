@@ -7,7 +7,7 @@
 // Volontairement découplé de l'API `macroTargets` : il n'accepte qu'une cible
 // minimale (grammes de macro + kcal), pour être câblé dans App.tsx en une ligne
 // quelle que soit la manière dont la cible est calculée.
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FOODS, FOODS_BY_ID, FOOD_CATEGORIES } from "./calc/food";
 import {
   dayMacros,
@@ -23,6 +23,22 @@ import {
   type MuscleBand,
   type MuscleTargets,
 } from "./calc/aminoAcids";
+import {
+  DAY_KEY,
+  SAVED_MEALS_KEY,
+  SAVED_DISHES_KEY,
+  serializeDay,
+  serializeSaved,
+  deserializeDay,
+  deserializeSavedMeals,
+  deserializeSavedDishes,
+  nextIdFrom,
+  toSavedMeal,
+  toSavedDish,
+  fromSavedMeal,
+  fromSavedDish,
+} from "./calc/storage";
+import type { EMeal, EIngredient, SavedMeal, SavedDish } from "./calc/storage";
 
 // Cible de comparaison, en valeurs absolues journalières.
 export interface MacroGoal {
@@ -32,11 +48,24 @@ export interface MacroGoal {
   kcal: number;
 }
 
-// Types d'édition : comme les types d'`intake` mais avec un identifiant stable
-// pour les clés React (les aliments sont référencés par id, résolus à l'agrégation).
-interface EIngredient { id: number; foodId: string; grams: number }
-interface EDish { id: number; name: string; ingredients: EIngredient[] }
-interface EMeal { id: number; name: string; dishes: EDish[] }
+// Types d'édition (EMeal/EDish/EIngredient) et fonctions de (dé)sérialisation :
+// cf. `./calc/storage`. Les aliments sont référencés par id, résolus à l'agrégation.
+
+// Lecture localStorage tolérante (SSR/tests sans DOM, quota, JSON absent).
+function loadRaw(key: string): string | null {
+  try {
+    return typeof localStorage === "undefined" ? null : localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+function saveRaw(key: string, value: string): void {
+  try {
+    if (typeof localStorage !== "undefined") localStorage.setItem(key, value);
+  } catch {
+    // quota dépassé / stockage indisponible : on ignore silencieusement.
+  }
+}
 
 const round = (n: number) => Math.round(n);
 const one = (n: number) => Math.round(n * 10) / 10;
@@ -258,10 +287,75 @@ function MuscleAnalysisPanel({ analysis }: { analysis: MuscleAnalysis }) {
   );
 }
 
+// Menu déroulant sobre listant les modèles enregistrés (repas ou plats) avec,
+// pour chacun, l'insertion et la suppression. Réutilise l'esthétique <details>
+// des panneaux existants.
+function LibraryMenu(props: {
+  label: string;
+  empty: string;
+  names: string[];
+  onInsert: (index: number) => void;
+  onDelete: (index: number) => void;
+}) {
+  const { label, empty, names, onInsert, onDelete } = props;
+  return (
+    <details className="group relative">
+      <summary className="cursor-pointer list-none rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
+        {label}
+        {names.length > 0 && <span className="ml-1 text-slate-400">({names.length})</span>}
+      </summary>
+      <div className="absolute right-0 z-10 mt-1 w-64 rounded-lg border border-slate-200 bg-white p-2 shadow-lg">
+        {names.length === 0 ? (
+          <p className="px-2 py-1 text-xs text-slate-400">{empty}</p>
+        ) : (
+          <ul className="space-y-0.5">
+            {names.map((name, i) => (
+              <li key={i} className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => onInsert(i)}
+                  className="flex-1 truncate rounded px-2 py-1 text-left text-sm text-slate-700 hover:bg-emerald-50 hover:text-emerald-700"
+                  title={`Insérer « ${name} »`}
+                >
+                  {name}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onDelete(i)}
+                  className="rounded px-1.5 py-1 text-xs text-slate-300 hover:bg-red-50 hover:text-red-600"
+                  aria-label={`Supprimer le modèle « ${name} »`}
+                >
+                  ✕
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </details>
+  );
+}
+
 export function MealPlanner({ target, muscleTargets }: { target?: MacroGoal; muscleTargets?: MuscleTargets }) {
-  const [meals, setMeals] = useState<EMeal[]>([]);
-  const nextId = useRef(1);
+  // Journée en cours restaurée depuis localStorage (état vide si absent/invalide).
+  const [meals, setMeals] = useState<EMeal[]>(() => deserializeDay(loadRaw(DAY_KEY)));
+  // Compteur d'ids : au-delà du max des ids restaurés pour éviter les collisions.
+  const nextId = useRef(0);
+  if (nextId.current === 0) nextId.current = nextIdFrom(meals);
   const id = () => nextId.current++;
+
+  // Bibliothèque de modèles réutilisables (repas / plats enregistrés).
+  const [savedMeals, setSavedMeals] = useState<SavedMeal[]>(() =>
+    deserializeSavedMeals(loadRaw(SAVED_MEALS_KEY)),
+  );
+  const [savedDishes, setSavedDishes] = useState<SavedDish[]>(() =>
+    deserializeSavedDishes(loadRaw(SAVED_DISHES_KEY)),
+  );
+
+  // Persistance : à chaque changement, on réécrit la clé correspondante.
+  useEffect(() => saveRaw(DAY_KEY, serializeDay(meals)), [meals]);
+  useEffect(() => saveRaw(SAVED_MEALS_KEY, serializeSaved(savedMeals)), [savedMeals]);
+  useEffect(() => saveRaw(SAVED_DISHES_KEY, serializeSaved(savedDishes)), [savedDishes]);
 
   const day = useMemo(() => toDay(meals), [meals]);
   const total = useMemo(() => dayMacros(day), [day]);
@@ -353,17 +447,62 @@ export function MealPlanner({ target, muscleTargets }: { target?: MacroGoal; mus
       ),
     );
 
+  // --- Bibliothèque : enregistrer / insérer / supprimer des modèles ---
+
+  const saveMeal = (mealId: number) => {
+    const m = meals.find((x) => x.id === mealId);
+    if (!m) return;
+    const name = window.prompt("Enregistrer ce repas sous le nom :", m.name);
+    if (!name) return;
+    setSavedMeals((ls) => [...ls, { ...toSavedMeal(m), name }]);
+  };
+
+  const insertSavedMeal = (index: number) =>
+    setMeals((ms) => [...ms, fromSavedMeal(savedMeals[index], id)]);
+
+  const deleteSavedMeal = (index: number) =>
+    setSavedMeals((ls) => ls.filter((_, i) => i !== index));
+
+  const saveDish = (mealId: number, dishId: number) => {
+    const d = meals.find((x) => x.id === mealId)?.dishes.find((x) => x.id === dishId);
+    if (!d) return;
+    const name = window.prompt("Enregistrer ce plat sous le nom :", d.name);
+    if (!name) return;
+    setSavedDishes((ls) => [...ls, { ...toSavedDish(d), name }]);
+  };
+
+  const insertSavedDish = (mealId: number, index: number) =>
+    setMeals((ms) =>
+      ms.map((m) =>
+        m.id === mealId
+          ? { ...m, dishes: [...m.dishes, fromSavedDish(savedDishes[index], id)] }
+          : m,
+      ),
+    );
+
+  const deleteSavedDish = (index: number) =>
+    setSavedDishes((ls) => ls.filter((_, i) => i !== index));
+
   return (
     <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between gap-2">
         <h2 className="text-lg font-semibold">Repas de la journée</h2>
-        <button
-          type="button"
-          onClick={addMeal}
-          className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
-        >
-          + Ajouter un repas
-        </button>
+        <div className="flex items-center gap-2">
+          <LibraryMenu
+            label="Insérer un repas enregistré"
+            empty="Aucun repas enregistré. Utilisez « Enregistrer » sur un repas."
+            names={savedMeals.map((m) => m.name)}
+            onInsert={insertSavedMeal}
+            onDelete={deleteSavedMeal}
+          />
+          <button
+            type="button"
+            onClick={addMeal}
+            className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
+          >
+            + Ajouter un repas
+          </button>
+        </div>
       </div>
 
       {meals.length === 0 ? (
@@ -386,6 +525,13 @@ export function MealPlanner({ target, muscleTargets }: { target?: MacroGoal; mus
                   {dm && <MacroPills m={mealMacros(dm)} />}
                   <button
                     type="button"
+                    onClick={() => saveMeal(meal.id)}
+                    className="rounded-lg px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50"
+                  >
+                    Enregistrer
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => removeMeal(meal.id)}
                     className="rounded-lg px-2 py-1 text-sm text-slate-400 hover:bg-red-50 hover:text-red-600"
                     aria-label="Supprimer le repas"
@@ -406,6 +552,13 @@ export function MealPlanner({ target, muscleTargets }: { target?: MacroGoal; mus
                             className="flex-1 rounded border border-transparent px-2 py-1 text-sm font-medium hover:border-slate-200 focus:border-emerald-500 focus:outline-none"
                           />
                           {dd && <MacroPills m={dishMacros(dd)} />}
+                          <button
+                            type="button"
+                            onClick={() => saveDish(meal.id, dish.id)}
+                            className="rounded px-2 py-0.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50"
+                          >
+                            Enregistrer
+                          </button>
                           <button
                             type="button"
                             onClick={() => removeDish(meal.id, dish.id)}
@@ -461,13 +614,22 @@ export function MealPlanner({ target, muscleTargets }: { target?: MacroGoal; mus
                       </div>
                     );
                   })}
-                  <button
-                    type="button"
-                    onClick={() => addDish(meal.id)}
-                    className="text-sm text-emerald-700 hover:underline"
-                  >
-                    + Ajouter un plat
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => addDish(meal.id)}
+                      className="text-sm text-emerald-700 hover:underline"
+                    >
+                      + Ajouter un plat
+                    </button>
+                    <LibraryMenu
+                      label="Insérer un plat enregistré"
+                      empty="Aucun plat enregistré. Utilisez « Enregistrer » sur un plat."
+                      names={savedDishes.map((d) => d.name)}
+                      onInsert={(index) => insertSavedDish(meal.id, index)}
+                      onDelete={deleteSavedDish}
+                    />
+                  </div>
                 </div>
               </div>
             );
