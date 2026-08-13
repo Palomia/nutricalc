@@ -156,6 +156,220 @@ const TIPS: Record<string, Tip> = {
   },
 };
 
+// Infobulles des micronutriments (contenu UI, indexé sur le nom, cf. micros.ts) :
+// à chaque fois un rôle, puis où en trouver — et un conseil pratique quand il
+// est utile (absorption, exposition solaire, régime végétalien…).
+const MICRO_TIPS: Record<string, Tip> = {
+  "Vitamine C": {
+    intro:
+      "Antioxydant qui soutient l'immunité, la formation du collagène et l'absorption du fer d'origine végétale.",
+    sections: [
+      {
+        heading: "Où en trouver",
+        items: ["Agrumes, kiwi, fraises", "Poivron, persil, choux, légumes crus"],
+      },
+      {
+        heading: "Bon à savoir",
+        items: ["Fragile à la chaleur : privilégiez le cru ou une cuisson courte"],
+      },
+    ],
+  },
+  "Vitamine D": {
+    intro:
+      "Indispensable à la fixation du calcium sur l'os et au système immunitaire ; souvent insuffisante en hiver.",
+    sections: [
+      {
+        heading: "Où en trouver",
+        items: [
+          "Poissons gras (saumon, hareng, sardine, maquereau)",
+          "Jaune d'œuf, produits laitiers enrichis",
+        ],
+      },
+      {
+        heading: "Bon à savoir",
+        items: ["La peau en fabrique au soleil ; une supplémentation hivernale est fréquente"],
+      },
+    ],
+  },
+  "Vitamine A": {
+    intro: "Essentielle à la vision, à la peau et à l'immunité.",
+    sections: [
+      {
+        heading: "Où en trouver",
+        items: [
+          "Foie, beurre, œufs, produits laitiers",
+          "Bêta-carotène (provitamine A) : carotte, patate douce, légumes vert foncé",
+        ],
+      },
+    ],
+  },
+  "Vitamine E": {
+    intro: "Antioxydant qui protège les membranes des cellules.",
+    sections: [
+      {
+        heading: "Où en trouver",
+        items: ["Huiles végétales (tournesol, colza)", "Oléagineux (amandes, noisettes), germe de blé"],
+      },
+    ],
+  },
+  "Vitamine B1": {
+    intro: "Thiamine : métabolisme des glucides et bon fonctionnement nerveux.",
+    sections: [
+      {
+        heading: "Où en trouver",
+        items: ["Céréales complètes, légumineuses", "Porc, oléagineux"],
+      },
+    ],
+  },
+  "Vitamine B2": {
+    intro: "Riboflavine : production d'énergie, santé de la peau et des yeux.",
+    sections: [
+      {
+        heading: "Où en trouver",
+        items: ["Produits laitiers, œufs, abats", "Amandes, céréales complètes"],
+      },
+    ],
+  },
+  "Vitamine B3": {
+    intro: "Niacine : métabolisme énergétique et système nerveux.",
+    sections: [
+      {
+        heading: "Où en trouver",
+        items: ["Viande, volaille, poisson", "Arachides, céréales complètes"],
+      },
+    ],
+  },
+  "Vitamine B6": {
+    intro: "Métabolisme des protéines et fabrication des neurotransmetteurs.",
+    sections: [
+      {
+        heading: "Où en trouver",
+        items: ["Volaille, poisson", "Banane, pomme de terre, pois chiches"],
+      },
+    ],
+  },
+  "Vitamine B9": {
+    intro:
+      "Folates : renouvellement des cellules ; particulièrement importante avant et pendant la grossesse.",
+    sections: [
+      {
+        heading: "Où en trouver",
+        items: [
+          "Légumes verts à feuilles (épinard, mâche, brocoli)",
+          "Légumineuses, foie, agrumes",
+        ],
+      },
+    ],
+  },
+  "Vitamine B12": {
+    intro:
+      "Formation des globules rouges et système nerveux ; présente presque uniquement dans les produits animaux.",
+    sections: [
+      {
+        heading: "Où en trouver",
+        items: ["Viande, poisson, œufs, produits laitiers"],
+      },
+      {
+        heading: "Bon à savoir",
+        items: ["En régime végétalien, une supplémentation est nécessaire"],
+      },
+    ],
+  },
+  Calcium: {
+    intro: "Solidité des os et des dents, contraction musculaire, coagulation.",
+    sections: [
+      {
+        heading: "Où en trouver",
+        items: [
+          "Produits laitiers",
+          "Légumes verts, amandes, sardines avec arêtes, eaux riches en calcium",
+        ],
+      },
+    ],
+  },
+  Fer: {
+    intro:
+      "Transporte l'oxygène dans le sang ; les carences sont fréquentes, surtout chez la femme réglée.",
+    sections: [
+      {
+        heading: "Où en trouver",
+        items: ["Viande rouge, boudin, abats", "Légumineuses, légumes verts, œufs"],
+      },
+      {
+        heading: "Mieux l'absorber",
+        items: [
+          "Le fer animal (héminique) est mieux absorbé que le fer végétal",
+          "Associez une source de vitamine C au fer végétal",
+          "Thé et café pendant le repas réduisent l'absorption",
+        ],
+      },
+    ],
+  },
+  "Magnésium": {
+    intro: "Fonction musculaire et nerveuse, production d'énergie.",
+    sections: [
+      {
+        heading: "Où en trouver",
+        items: [
+          "Chocolat noir, oléagineux, légumineuses",
+          "Céréales complètes, certaines eaux minérales",
+        ],
+      },
+    ],
+  },
+  Zinc: {
+    intro: "Immunité, cicatrisation et synthèse des protéines.",
+    sections: [
+      {
+        heading: "Où en trouver",
+        items: ["Viande, fruits de mer (huîtres), fromage", "Légumineuses, oléagineux"],
+      },
+    ],
+  },
+  Iode: {
+    intro: "Nécessaire à la fabrication des hormones thyroïdiennes.",
+    sections: [
+      {
+        heading: "Où en trouver",
+        items: ["Poissons de mer, fruits de mer, algues", "Produits laitiers, sel iodé"],
+      },
+    ],
+  },
+  "Sélénium": {
+    intro: "Antioxydant qui soutient la thyroïde et l'immunité.",
+    sections: [
+      {
+        heading: "Où en trouver",
+        items: ["Noix du Brésil, poisson, fruits de mer", "Œufs, abats"],
+      },
+    ],
+  },
+  Potassium: {
+    intro: "Équilibre hydrique, pression artérielle et fonction musculaire.",
+    sections: [
+      {
+        heading: "Où en trouver",
+        items: [
+          "Fruits et légumes (banane, pomme de terre, épinard)",
+          "Légumes secs, fruits secs",
+        ],
+      },
+    ],
+  },
+  Phosphore: {
+    intro: "Structure des os et des dents, production d'énergie.",
+    sections: [
+      {
+        heading: "Où en trouver",
+        items: [
+          "Produits laitiers, viande, poisson",
+          "Légumineuses, oléagineux (les carences sont rares)",
+        ],
+      },
+    ],
+  },
+};
+
 function NameWithTip({ name, tip }: { name: string; tip: Tip }) {
   return (
     <span tabIndex={0} className="group/tip relative inline-flex cursor-help items-center gap-1">
@@ -426,7 +640,11 @@ export function App() {
                 <div className="grid grid-cols-1 gap-x-8 gap-y-1 sm:grid-cols-2">
                   {result.report.micros.map((micro) => (
                     <div key={micro.name} className="flex items-baseline justify-between border-b border-slate-100 py-1.5 text-sm">
-                      <span className="text-slate-700" title={micro.note}>{micro.name}</span>
+                      {MICRO_TIPS[micro.name] ? (
+                        <NameWithTip name={micro.name} tip={MICRO_TIPS[micro.name]} />
+                      ) : (
+                        <span className="text-slate-700" title={micro.note}>{micro.name}</span>
+                      )}
                       <span className="tabular-nums text-slate-900">
                         {one(micro.amount)} {micro.unit}
                         <span className="ml-2 text-xs text-slate-400">{micro.kind}</span>
