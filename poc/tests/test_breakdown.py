@@ -61,3 +61,33 @@ def test_oleic_is_a_range():
     ole = fa["Acide oléique (AGMI, ω-9)"]
     assert ole.percent_aet == 15.0
     assert ole.percent_aet_max == 20.0
+
+
+# --- Glucides ---
+
+def test_carb_components_count_and_names():
+    c = {x.name: x for x in macro_targets(_profile(), 2500).carb_components}
+    assert len(c) == 3
+    assert "Fibres" in c
+    assert "Sucres (hors lactose et galactose)" in c
+
+
+def test_fibres_is_as_30g():
+    c = {x.name: x for x in macro_targets(_profile(), 2500).carb_components}
+    assert c["Fibres"].kind == "AS"
+    assert c["Fibres"].grams == 30
+
+
+def test_total_sugar_is_ceiling_100g():
+    c = {x.name: x for x in macro_targets(_profile(), 2500).carb_components}
+    sucre = c["Sucres (hors lactose et galactose)"]
+    assert sucre.kind == "limite"
+    assert sucre.grams == 100
+
+
+def test_free_sugars_derived_from_percent():
+    energy = 2500.0
+    c = {x.name: x for x in macro_targets(_profile(), energy).carb_components}
+    fs = c["Sucres libres / ajoutés"]
+    assert fs.percent_aet == 10
+    assert fs.grams == pytest.approx(10 / 100 * energy / KCAL_PER_G["carb"])

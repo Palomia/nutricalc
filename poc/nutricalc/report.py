@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .energy import bmr_mifflin_st_jeor, tdee
-from .macros import FattyAcidTarget, MacroTargets, macro_targets
+from .macros import CarbComponent, FattyAcidTarget, MacroTargets, macro_targets
 from .micros import MicroReference, micronutrient_references
 from .profile import Profile
 
@@ -43,6 +43,13 @@ def _format_fatty_acid(fa: FattyAcidTarget) -> str:
     return value
 
 
+def _format_carb(c: CarbComponent) -> str:
+    prefix = "≤ " if c.kind == "limite" else ("< " if c.kind == "OMS" else "")
+    if c.percent_aet is not None:
+        return f"{prefix}{c.grams:.0f} g/j ({c.percent_aet:g} % AET)"
+    return f"{prefix}{c.grams:.0f} g/j"
+
+
 def format_report(report: DailyReport) -> str:
     """Rend le rapport en texte lisible (pour la démo en ligne de commande)."""
     p = report.profile
@@ -72,6 +79,10 @@ def format_report(report: DailyReport) -> str:
     lines += ["", "  Acides gras (références ANSES) :"]
     for fa in report.macros.fatty_acids:
         lines.append(f"    {fa.name:<40} {_format_fatty_acid(fa):<28} [{fa.kind}]")
+
+    lines += ["", "  Glucides — détail (références ANSES/OMS) :"]
+    for c in report.macros.carb_components:
+        lines.append(f"    {c.name:<40} {_format_carb(c):<28} [{c.kind}]")
 
     lines += ["", "Micronutriments (référence ANSES) :"]
     for micro in report.micros:

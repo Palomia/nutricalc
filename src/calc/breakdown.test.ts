@@ -61,3 +61,28 @@ describe("acides gras", () => {
     expect(fa["Acide oléique (AGMI, ω-9)"].percentAetMax).toBe(20);
   });
 });
+
+describe("glucides", () => {
+  it("3 composantes", () => {
+    expect(macroTargets(profile(), 2500).carbComponents).toHaveLength(3);
+  });
+
+  it("fibres : AS à 30 g", () => {
+    const c = byName(macroTargets(profile(), 2500).carbComponents);
+    expect(c["Fibres"].kind).toBe("AS");
+    expect(c["Fibres"].grams).toBe(30);
+  });
+
+  it("sucres totaux : limite à 100 g", () => {
+    const c = byName(macroTargets(profile(), 2500).carbComponents);
+    expect(c["Sucres (hors lactose et galactose)"].kind).toBe("limite");
+    expect(c["Sucres (hors lactose et galactose)"].grams).toBe(100);
+  });
+
+  it("sucres libres : dérivés de 10 % AET", () => {
+    const energy = 2500;
+    const c = byName(macroTargets(profile(), energy).carbComponents);
+    expect(c["Sucres libres / ajoutés"].percentAet).toBe(10);
+    expect(c["Sucres libres / ajoutés"].grams).toBeCloseTo((10 / 100) * energy / KCAL_PER_G.carb, 6);
+  });
+});

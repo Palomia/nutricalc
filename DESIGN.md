@@ -43,6 +43,9 @@ TDEE = BMR × facteur d'activité   (1,2 sédentaire … 1,9 très actif)
 - Lipides → familles d'acides gras (AFSSA/ANSES 2006-SA-0359) : AGS ≤ 12 %
   AET (dont laurique+myristique+palmitique ≤ 8 %), oléique 15-20 %, linoléique
   ω-6 4 %, ALA ω-3 1 %, EPA 250 mg/j, DHA 250 mg/j.
+- Glucides → fibres 30 g/j (AS, ANSES 2016), sucres hors lactose/galactose
+  ≤ 100 g/j (limite ANSES), sucres libres/ajoutés < 10 % AET (objectif OMS ;
+  < 5 % idéalement).
 
 **Micronutriments.** Table de références par nutriment et par sexe, chaque
 valeur étiquetée RNP (Référence Nutritionnelle pour la Population) ou AS
