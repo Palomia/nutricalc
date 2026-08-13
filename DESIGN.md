@@ -36,6 +36,14 @@ TDEE = BMR × facteur d'activité   (1,2 sédentaire … 1,9 très actif)
 - Lipides : **35-40 %** de l'apport énergétique total (AET) — on vise 37,5 %.
 - Glucides : **40-55 %** de l'AET — ici le complément de l'énergie restante.
 
+**Découpage des macronutriments** (sous chaque macro) :
+
+- Protéines → 9 acides aminés indispensables (besoins moyens FAO/OMS/UNU 2007,
+  mg/kg/j, identiques hommes/femmes ; besoins moyens, pas des RNP).
+- Lipides → familles d'acides gras (AFSSA/ANSES 2006-SA-0359) : AGS ≤ 12 %
+  AET (dont laurique+myristique+palmitique ≤ 8 %), oléique 15-20 %, linoléique
+  ω-6 4 %, ALA ω-3 1 %, EPA 250 mg/j, DHA 250 mg/j.
+
 **Micronutriments.** Table de références par nutriment et par sexe, chaque
 valeur étiquetée RNP (Référence Nutritionnelle pour la Population) ou AS
 (Apport Satisfaisant).

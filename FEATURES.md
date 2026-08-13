@@ -7,6 +7,9 @@
 - [x] Énergie : BMR Mifflin-St Jeor + TDEE par niveau d'activité.
 - [x] Macronutriments : protéines (0,83 g/kg), lipides (37,5 % AET), glucides.
 - [x] Micronutriments : table de références ANSES (18 nutriments) par sexe.
+- [x] Découpage protéines → 9 acides aminés indispensables (FAO/OMS, mg/kg).
+- [x] Découpage lipides → familles d'acides gras (ANSES : AGS, oléique,
+      linoléique ω-6, ALA/EPA/DHA ω-3), en % AET et mg.
 - [x] POC Python (`poc/`) : calcul + rendu texte + démo CLI, tests pytest.
 - [x] App web (racine) : Vite + React + TS + Tailwind ; logique de calcul
       portée en TypeScript (`src/calc/`), UI formulaire → rapport, tests Vitest.

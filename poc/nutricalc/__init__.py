@@ -1,7 +1,8 @@
 """nutricalc — proof of concept.
 
 Calcul des apports journaliers recommandés pour un adulte :
-énergie (BMR Mifflin-St Jeor + niveau d'activité), macronutriments et
+énergie (BMR Mifflin-St Jeor + niveau d'activité), macronutriments (avec
+découpage en acides aminés indispensables et en familles d'acides gras) et
 micronutriments (références ANSES).
 
 Aucune donnée personnelle n'est stockée : les entrées d'un profil servent
@@ -10,7 +11,15 @@ uniquement au calcul en mémoire, puis sont oubliées.
 
 from .profile import ActivityLevel, Profile, Sex
 from .energy import bmr_mifflin_st_jeor, tdee
-from .macros import MacroTarget, MacroTargets, macro_targets
+from .macros import (
+    AminoAcid,
+    FattyAcidTarget,
+    MacroTarget,
+    MacroTargets,
+    amino_acid_targets,
+    fatty_acid_targets,
+    macro_targets,
+)
 from .micros import MicroReference, micronutrient_references
 from .report import DailyReport, daily_report
 
@@ -20,8 +29,12 @@ __all__ = [
     "Sex",
     "bmr_mifflin_st_jeor",
     "tdee",
+    "AminoAcid",
+    "FattyAcidTarget",
     "MacroTarget",
     "MacroTargets",
+    "amino_acid_targets",
+    "fatty_acid_targets",
     "macro_targets",
     "MicroReference",
     "micronutrient_references",

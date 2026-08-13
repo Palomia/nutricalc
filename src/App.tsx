@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { dailyReport } from "./calc/report";
 import { ACTIVITY_LEVELS, type ActivityLevel, type Profile, type Sex } from "./calc/profile";
+import type { FattyAcidTarget, MacroTarget } from "./calc/macros";
 
 const ACTIVITY_LABELS: Record<ActivityLevel, string> = {
   sedentary: "Sédentaire",
@@ -10,14 +11,16 @@ const ACTIVITY_LABELS: Record<ActivityLevel, string> = {
   veryActive: "Très intense",
 };
 
-const MACRO_STYLE = {
-  protein: { label: "Protéines", bar: "bg-sky-500" },
-  lipid: { label: "Lipides", bar: "bg-amber-500" },
-  carb: { label: "Glucides", bar: "bg-emerald-500" },
-} as const;
-
 const round = (n: number) => Math.round(n);
 const one = (n: number) => Math.round(n * 10) / 10;
+
+function fmtFattyAcid(fa: FattyAcidTarget): string {
+  if (fa.milligrams !== null) return `${fa.milligrams} mg/j`;
+  if (fa.percentAetMax !== null && fa.grams !== null && fa.gramsMax !== null)
+    return `${fa.percentAet}–${fa.percentAetMax} % AET · ≈ ${round(fa.grams)}–${round(fa.gramsMax)} g`;
+  const prefix = fa.kind === "limite" ? "≤ " : "";
+  return `${prefix}${fa.percentAet} % AET · ≈ ${round(fa.grams ?? 0)} g`;
+}
 
 function NumberField(props: {
   label: string;
@@ -42,6 +45,24 @@ function NumberField(props: {
         <span className="text-slate-400">{props.unit}</span>
       </div>
     </label>
+  );
+}
+
+function MacroRow(props: { label: string; bar: string; target: MacroTarget; children?: ReactNode }) {
+  const { label, bar, target, children } = props;
+  return (
+    <div>
+      <div className="mb-1 flex justify-between text-sm">
+        <span className="font-medium">{label}</span>
+        <span className="text-slate-500">
+          {round(target.grams)} g · {round(target.kcal)} kcal · {round(target.percentAet * 100)} %
+        </span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+        <div className={"h-full rounded-full " + bar} style={{ width: `${target.percentAet * 100}%` }} />
+      </div>
+      {children}
+    </div>
   );
 }
 
@@ -143,23 +164,42 @@ export function App() {
               <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <h2 className="mb-4 text-lg font-semibold">Macronutriments</h2>
                 <div className="space-y-4">
-                  {(["protein", "lipid", "carb"] as const).map((key) => {
-                    const m = result.report!.macros[key];
-                    const style = MACRO_STYLE[key];
-                    return (
-                      <div key={key}>
-                        <div className="mb-1 flex justify-between text-sm">
-                          <span className="font-medium">{style.label}</span>
-                          <span className="text-slate-500">
-                            {round(m.grams)} g · {round(m.kcal)} kcal · {round(m.percentAet * 100)} %
-                          </span>
-                        </div>
-                        <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-                          <div className={"h-full rounded-full " + style.bar} style={{ width: `${m.percentAet * 100}%` }} />
-                        </div>
+                  <MacroRow label="Protéines" bar="bg-sky-500" target={result.report.macros.protein}>
+                    <details className="group mt-2">
+                      <summary className="cursor-pointer text-xs text-sky-700 hover:underline">
+                        Acides aminés indispensables (9) — besoins FAO/OMS
+                      </summary>
+                      <div className="mt-2 grid grid-cols-1 gap-x-8 gap-y-1 sm:grid-cols-2">
+                        {result.report.macros.aminoAcids.map((aa) => (
+                          <div key={aa.name} className="flex items-baseline justify-between border-b border-slate-100 py-1 text-sm">
+                            <span className="text-slate-600">{aa.name}</span>
+                            <span className="tabular-nums text-slate-900">{round(aa.mg)} mg</span>
+                          </div>
+                        ))}
                       </div>
-                    );
-                  })}
+                    </details>
+                  </MacroRow>
+
+                  <MacroRow label="Lipides" bar="bg-amber-500" target={result.report.macros.lipid}>
+                    <details className="group mt-2">
+                      <summary className="cursor-pointer text-xs text-amber-700 hover:underline">
+                        Acides gras — références ANSES
+                      </summary>
+                      <div className="mt-2 space-y-1">
+                        {result.report.macros.fattyAcids.map((fa) => (
+                          <div key={fa.name} className="flex items-baseline justify-between border-b border-slate-100 py-1 text-sm">
+                            <span className="text-slate-600" title={fa.note}>{fa.name}</span>
+                            <span className="tabular-nums text-slate-900">
+                              {fmtFattyAcid(fa)}
+                              <span className="ml-2 text-xs text-slate-400">{fa.kind}</span>
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </details>
+                  </MacroRow>
+
+                  <MacroRow label="Glucides" bar="bg-emerald-500" target={result.report.macros.carb} />
                 </div>
               </section>
 
@@ -177,8 +217,8 @@ export function App() {
                   ))}
                 </div>
                 <p className="mt-4 text-xs text-slate-400">
-                  Valeurs indicatives (références ANSES, RNP/AS), à revalider. Outil informatif —
-                  ne remplace pas un avis médical ou diététique.
+                  Valeurs indicatives (références ANSES, RNP/AS ; acides aminés FAO/OMS), à
+                  revalider. Outil informatif — ne remplace pas un avis médical ou diététique.
                 </p>
               </section>
             </>

@@ -1,14 +1,23 @@
-"""Macronutriments.
+"""Macronutriments et leurs découpages.
 
 Références ANSES pour l'adulte :
-  - Protéines : RNP 0,83 g/kg de poids corporel et par jour.
-  - Lipides   : 35-40 % de l'apport énergétique total (AET) — on vise 37,5 %.
+  - Protéines : RNP 0,83 g/kg/j, découpées en acides aminés indispensables.
+  - Lipides   : 35-40 % de l'AET, découpés en familles d'acides gras.
   - Glucides  : 40-55 % de l'AET — ici le complément de l'énergie restante.
+
+Découpages :
+  - Acides aminés indispensables : besoins moyens FAO/OMS/UNU 2007 (mg/kg/j,
+    adulte, identiques hommes/femmes). Ce sont des besoins moyens, pas des RNP.
+  - Acides gras : références AFSSA/ANSES (avis 2006-SA-0359, 2010), en % de
+    l'AET ou en valeur absolue (EPA, DHA). AS = apport satisfaisant ;
+    « limite » = valeur maximale de santé publique (pas une limite
+    toxicologique).
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Optional
 
 from .profile import Profile
 
@@ -26,14 +35,96 @@ class MacroTarget:
 
 
 @dataclass(frozen=True)
+class AminoAcid:
+    name: str
+    mg_per_kg: float  # besoin moyen FAO/OMS (mg/kg de poids corporel/j)
+    mg: float  # besoin journalier = mg_per_kg × poids
+
+
+@dataclass(frozen=True)
+class FattyAcidTarget:
+    name: str
+    family: str  # "Saturés" | "Mono-insaturés" | "Poly-insaturés ω-6" | "Poly-insaturés ω-3"
+    kind: str  # "AS" | "limite"
+    percent_aet: Optional[float]  # borne (limite) ou point/borne basse (AS), en %
+    percent_aet_max: Optional[float]  # borne haute si intervalle, en %
+    grams: Optional[float]  # équivalent en g/j (dérivé de percent_aet et de l'énergie)
+    grams_max: Optional[float]
+    milligrams: Optional[float]  # valeurs absolues (EPA, DHA)
+    note: str = ""
+
+
+@dataclass(frozen=True)
 class MacroTargets:
     protein: MacroTarget
     lipid: MacroTarget
     carb: MacroTarget
+    amino_acids: list[AminoAcid]  # découpage des protéines
+    fatty_acids: list[FattyAcidTarget]  # découpage des lipides
+
+
+# Besoins moyens en acides aminés indispensables, adulte (>18 ans).
+# FAO/WHO/UNU 2007 — FAO Food and Nutrition Paper 92, table 3. mg/kg/j.
+_AMINO_ACIDS_MG_PER_KG: list[tuple[str, float]] = [
+    ("Histidine", 10.0),
+    ("Isoleucine", 20.0),
+    ("Leucine", 39.0),
+    ("Lysine", 30.0),
+    ("Acides aminés soufrés (Met + Cys)", 15.0),
+    ("Acides aminés aromatiques (Phe + Tyr)", 25.0),
+    ("Thréonine", 15.0),
+    ("Tryptophane", 4.0),
+    ("Valine", 26.0),
+]
+
+# Références acides gras, adulte (AFSSA/ANSES 2006-SA-0359).
+# (nom, famille, type, % AET, % AET max, mg/j absolu, note)
+_FATTY_ACIDS: list[tuple[str, str, str, Optional[float], Optional[float], Optional[float], str]] = [
+    ("Acides gras saturés", "Saturés", "limite", 12.0, None, None, "valeur maximale"),
+    ("dont laurique + myristique + palmitique", "Saturés", "limite", 8.0, None, None, "athérogènes en excès"),
+    ("Acide oléique (AGMI, ω-9)", "Mono-insaturés", "AS", 15.0, 20.0, None, ""),
+    ("Acide linoléique (ω-6)", "Poly-insaturés ω-6", "AS", 4.0, None, None, ""),
+    ("Acide α-linolénique (ALA, ω-3)", "Poly-insaturés ω-3", "AS", 1.0, None, None, ""),
+    ("EPA", "Poly-insaturés ω-3", "AS", None, None, 250.0, "EPA + DHA : 500 mg/j"),
+    ("DHA", "Poly-insaturés ω-3", "AS", None, None, 250.0, "EPA + DHA : 500 mg/j"),
+]
+
+
+def amino_acid_targets(profile: Profile) -> list[AminoAcid]:
+    """Besoins en acides aminés indispensables (mg/j) selon le poids."""
+    return [
+        AminoAcid(name=name, mg_per_kg=mg_per_kg, mg=mg_per_kg * profile.weight_kg)
+        for (name, mg_per_kg) in _AMINO_ACIDS_MG_PER_KG
+    ]
+
+
+def fatty_acid_targets(energy_kcal: float) -> list[FattyAcidTarget]:
+    """Références en acides gras ; les valeurs en % AET sont converties en g/j."""
+    out: list[FattyAcidTarget] = []
+    for name, family, kind, pct, pct_max, mg, note in _FATTY_ACIDS:
+        grams = pct / 100 * energy_kcal / KCAL_PER_G["lipid"] if pct is not None else None
+        grams_max = (
+            pct_max / 100 * energy_kcal / KCAL_PER_G["lipid"] if pct_max is not None else None
+        )
+        out.append(
+            FattyAcidTarget(
+                name=name,
+                family=family,
+                kind=kind,
+                percent_aet=pct,
+                percent_aet_max=pct_max,
+                grams=grams,
+                grams_max=grams_max,
+                milligrams=mg,
+                note=note,
+            )
+        )
+    return out
 
 
 def macro_targets(profile: Profile, energy_kcal: float) -> MacroTargets:
-    """Répartit l'apport énergétique en protéines, lipides et glucides."""
+    """Répartit l'apport énergétique en protéines, lipides et glucides, avec
+    le découpage des protéines (acides aminés) et des lipides (acides gras)."""
     if energy_kcal <= 0:
         raise ValueError("L'apport énergétique doit être strictement positif.")
 
@@ -43,8 +134,7 @@ def macro_targets(profile: Profile, energy_kcal: float) -> MacroTargets:
     lipid_kcal = LIPID_FRACTION_AET * energy_kcal
     lipid_g = lipid_kcal / KCAL_PER_G["lipid"]
 
-    # Les glucides absorbent le reste de l'énergie ; borné à 0 pour les cas
-    # extrêmes où protéines + lipides dépasseraient l'AET.
+    # Les glucides absorbent le reste de l'énergie ; borné à 0 aux cas extrêmes.
     carb_kcal = max(energy_kcal - protein_kcal - lipid_kcal, 0.0)
     carb_g = carb_kcal / KCAL_PER_G["carb"]
 
@@ -52,4 +142,6 @@ def macro_targets(profile: Profile, energy_kcal: float) -> MacroTargets:
         protein=MacroTarget(protein_g, protein_kcal, protein_kcal / energy_kcal),
         lipid=MacroTarget(lipid_g, lipid_kcal, lipid_kcal / energy_kcal),
         carb=MacroTarget(carb_g, carb_kcal, carb_kcal / energy_kcal),
+        amino_acids=amino_acid_targets(profile),
+        fatty_acids=fatty_acid_targets(energy_kcal),
     )
