@@ -52,45 +52,148 @@ function fmtCarb(c: CarbComponent): string {
   return `${prefix}${round(c.grams ?? 0)} g/j${pct}`;
 }
 
-const FIBER_TIP = {
-  intro:
-    "Viser plus de 30 g/j est excellent pour la santé, à condition d'adapter son corps en douceur.",
-  why: [
-    "Améliore le transit et la digestion",
-    "Aide à réguler la glycémie et le cholestérol",
-    "Augmente la sensation de satiété",
-  ],
-  how: [
-    "Augmentez progressivement, sur 2 à 3 semaines",
-    "Buvez 1,5 à 2 L d'eau par jour pour aider les fibres à passer",
-    "Légumineuses (lentilles, pois chiches), céréales complètes, fruits et légumes avec la peau",
-  ],
+// Infobulles éducatives (contenu UI uniquement, indépendant du calcul). Chaque
+// entrée est indexée sur le nom exact de la ligne (cf. macros.ts) : une intro,
+// puis des sections « titre + points ». Ajouter une clé suffit pour équiper une
+// nouvelle ligne de la même infobulle au survol/focus.
+interface Tip {
+  intro: string;
+  sections: { heading: string; items: string[] }[];
+}
+
+const TIPS: Record<string, Tip> = {
+  Fibres: {
+    intro:
+      "Viser plus de 30 g/j est excellent pour la santé, à condition d'adapter son corps en douceur.",
+    sections: [
+      {
+        heading: "Pourquoi viser plus de 30 g ?",
+        items: [
+          "Améliore le transit et la digestion",
+          "Aide à réguler la glycémie et le cholestérol",
+          "Augmente la sensation de satiété",
+        ],
+      },
+      {
+        heading: "Augmenter sans risque",
+        items: [
+          "Augmentez progressivement, sur 2 à 3 semaines",
+          "Buvez 1,5 à 2 L d'eau par jour pour aider les fibres à passer",
+          "Légumineuses (lentilles, pois chiches), céréales complètes, fruits et légumes avec la peau",
+        ],
+      },
+    ],
+  },
+  "Sucres (hors lactose et galactose)": {
+    intro:
+      "Rester sous 100 g/j de sucres (hors lactose et galactose) protège la santé métabolique et dentaire.",
+    sections: [
+      {
+        heading: "Pourquoi limiter ?",
+        items: [
+          "Limite les pics de glycémie et le stockage sous forme de graisses",
+          "Réduit le risque de surpoids, de diabète de type 2 et de caries",
+          "Aide à maîtriser les triglycérides",
+        ],
+      },
+      {
+        heading: "Comment réduire",
+        items: [
+          "Préférez le fruit entier au jus de fruit",
+          "Réduisez les boissons sucrées et sodas, première source de sucres",
+          "Lisez les étiquettes : le sucre se cache dans beaucoup de produits salés",
+        ],
+      },
+    ],
+  },
+  "Sucres libres / ajoutés": {
+    intro:
+      "L'OMS recommande de limiter les sucres libres à moins de 10 % des calories, idéalement moins de 5 %.",
+    sections: [
+      {
+        heading: "Que sont les sucres libres ?",
+        items: [
+          "Sucres ajoutés lors de la fabrication ou à table",
+          "Sucres naturellement présents dans le miel, les sirops et les jus de fruits",
+          "À distinguer des sucres des fruits entiers et des produits laitiers non sucrés",
+        ],
+      },
+      {
+        heading: "Comment s'en rapprocher",
+        items: [
+          "Sucrez moins café, thé et yaourts, votre goût s'adapte vite",
+          "Remplacez les boissons sucrées par de l'eau ou des infusions",
+          "Gardez desserts et confiseries pour les occasions",
+        ],
+      },
+    ],
+  },
+  "Acides gras saturés": {
+    intro:
+      "Limiter les acides gras saturés à 12 % des calories protège le cœur et les artères.",
+    sections: [
+      {
+        heading: "Pourquoi limiter ?",
+        items: [
+          "Un excès élève le cholestérol LDL (« mauvais » cholestérol)",
+          "Augmente le risque cardiovasculaire à long terme",
+        ],
+      },
+      {
+        heading: "Comment équilibrer",
+        items: [
+          "Privilégiez les huiles végétales (olive, colza) et les poissons gras",
+          "Modérez beurre, crème, fromage et charcuterie",
+          "Limitez les produits ultra-transformés (viennoiseries, plats industriels)",
+        ],
+      },
+    ],
+  },
+  "Acide α-linolénique (ALA, ω-3)": {
+    intro:
+      "Les oméga-3 sont essentiels : le corps ne les fabrique pas et ils manquent souvent dans l'alimentation.",
+    sections: [
+      {
+        heading: "Pourquoi en consommer assez ?",
+        items: [
+          "Soutiennent la santé cardiovasculaire",
+          "Contribuent au bon fonctionnement du cerveau et de la vision",
+          "Ont un effet anti-inflammatoire",
+        ],
+      },
+      {
+        heading: "Où les trouver",
+        items: [
+          "ALA : huiles de colza, de lin et de noix, noix",
+          "EPA et DHA : poissons gras 2 fois par semaine (sardine, maquereau, saumon)",
+        ],
+      },
+    ],
+  },
 };
 
-function FiberNameWithTip() {
+function NameWithTip({ name, tip }: { name: string; tip: Tip }) {
   return (
     <span tabIndex={0} className="group/tip relative inline-flex cursor-help items-center gap-1">
       <span className="text-slate-600 underline decoration-dotted decoration-slate-300 underline-offset-2">
-        Fibres
+        {name}
       </span>
       <span aria-hidden className="text-xs text-slate-400">ⓘ</span>
       <div
         role="tooltip"
         className="pointer-events-none absolute left-0 top-full z-10 mt-1 hidden w-72 rounded-lg border border-slate-200 bg-white p-3 text-left text-xs leading-relaxed text-slate-600 shadow-lg group-hover/tip:block group-focus-within/tip:block"
       >
-        <p className="mb-2 font-medium text-slate-800">{FIBER_TIP.intro}</p>
-        <p className="font-semibold text-emerald-700">Pourquoi viser plus de 30 g ?</p>
-        <ul className="mb-2 ml-4 list-disc">
-          {FIBER_TIP.why.map((x) => (
-            <li key={x}>{x}</li>
-          ))}
-        </ul>
-        <p className="font-semibold text-emerald-700">Augmenter sans risque</p>
-        <ul className="ml-4 list-disc">
-          {FIBER_TIP.how.map((x) => (
-            <li key={x}>{x}</li>
-          ))}
-        </ul>
+        <p className="mb-2 font-medium text-slate-800">{tip.intro}</p>
+        {tip.sections.map((s, i) => (
+          <div key={s.heading}>
+            <p className="font-semibold text-emerald-700">{s.heading}</p>
+            <ul className={(i < tip.sections.length - 1 ? "mb-2 " : "") + "ml-4 list-disc"}>
+              {s.items.map((x) => (
+                <li key={x}>{x}</li>
+              ))}
+            </ul>
+          </div>
+        ))}
       </div>
     </span>
   );
@@ -294,7 +397,11 @@ export function App() {
                       <div className="mt-2 space-y-1">
                         {result.report.macros.fattyAcids.map((fa) => (
                           <div key={fa.name} className="flex items-baseline justify-between border-b border-slate-100 py-1 text-sm">
-                            <span className="text-slate-600" title={fa.note}>{fa.name}</span>
+                            {TIPS[fa.name] ? (
+                              <NameWithTip name={fa.name} tip={TIPS[fa.name]} />
+                            ) : (
+                              <span className="text-slate-600" title={fa.note}>{fa.name}</span>
+                            )}
                             <span className="tabular-nums text-slate-900">
                               {fmtFattyAcid(fa)}
                               <span className="ml-2 text-xs text-slate-400">{fa.kind}</span>
@@ -313,8 +420,8 @@ export function App() {
                       <div className="mt-2 space-y-1">
                         {result.report.macros.carbComponents.map((c) => (
                           <div key={c.name} className="flex items-baseline justify-between border-b border-slate-100 py-1 text-sm">
-                            {c.name === "Fibres" ? (
-                              <FiberNameWithTip />
+                            {TIPS[c.name] ? (
+                              <NameWithTip name={c.name} tip={TIPS[c.name]} />
                             ) : (
                               <span className="text-slate-600" title={c.note}>{c.name}</span>
                             )}
