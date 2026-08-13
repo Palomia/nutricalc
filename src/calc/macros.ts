@@ -13,8 +13,9 @@
 //    adulte, identiques hommes/femmes ; ce sont des besoins moyens, pas des RNP).
 //  - Acides gras : références AFSSA/ANSES (avis 2006-SA-0359), en % de l'AET ou
 //    en valeur absolue (EPA, DHA).
-//  - Glucides : fibres (AS ANSES 2016), sucres hors lactose/galactose (limite
-//    ANSES 2016), sucres libres/ajoutés (objectif OMS 2015).
+//  - Glucides : fibres (AS ANSES 2016) et sucres libres/ajoutés (objectif OMS
+//    2015 : sucres ajoutés, miel, sirops et jus de fruits ; hors fruits entiers
+//    et lactose naturel des produits laitiers).
 //
 // AS = apport satisfaisant ; "limite" = valeur maximale de santé publique ;
 // "OMS" = objectif de santé publique OMS (aucun n'est une limite toxicologique).
@@ -118,7 +119,6 @@ interface CarbRow {
 // Découpage des glucides, adulte (ANSES 2016 + OMS 2015).
 const CARB_COMPONENTS: CarbRow[] = [
   { name: "Fibres", kind: "AS", gramsFixed: 30, percentAet: null, note: "ANSES 2016" },
-  { name: "Sucres (hors lactose et galactose)", kind: "limite", gramsFixed: 100, percentAet: null, note: "valeur maximale (ANSES)" },
   { name: "Sucres libres / ajoutés", kind: "OMS", gramsFixed: null, percentAet: 10, note: "< 5 % AET idéalement (OMS)" },
 ];
 
