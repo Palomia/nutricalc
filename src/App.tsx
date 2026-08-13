@@ -84,45 +84,29 @@ const TIPS: Record<string, Tip> = {
       },
     ],
   },
-  "Sucres (hors lactose et galactose)": {
-    intro:
-      "Rester sous 100 g/j de sucres (hors lactose et galactose) protège la santé métabolique et dentaire.",
-    sections: [
-      {
-        heading: "Pourquoi limiter ?",
-        items: [
-          "Limite les pics de glycémie et le stockage sous forme de graisses",
-          "Réduit le risque de surpoids, de diabète de type 2 et de caries",
-          "Aide à maîtriser les triglycérides",
-        ],
-      },
-      {
-        heading: "Comment réduire",
-        items: [
-          "Préférez le fruit entier au jus de fruit",
-          "Réduisez les boissons sucrées et sodas, première source de sucres",
-          "Lisez les étiquettes : le sucre se cache dans beaucoup de produits salés",
-        ],
-      },
-    ],
-  },
   "Sucres libres / ajoutés": {
     intro:
       "L'OMS recommande de limiter les sucres libres à moins de 10 % des calories, idéalement moins de 5 %.",
     sections: [
       {
-        heading: "Que sont les sucres libres ?",
+        heading: "Ce que sont les sucres libres",
         items: [
           "Sucres ajoutés lors de la fabrication ou à table",
-          "Sucres naturellement présents dans le miel, les sirops et les jus de fruits",
-          "À distinguer des sucres des fruits entiers et des produits laitiers non sucrés",
+          "Sucres du miel, des sirops et des jus de fruits",
+        ],
+      },
+      {
+        heading: "Ce qui n'en fait pas partie",
+        items: [
+          "Sucres des fruits entiers",
+          "Lactose naturel des produits laitiers non sucrés",
         ],
       },
       {
         heading: "Comment s'en rapprocher",
         items: [
           "Sucrez moins café, thé et yaourts, votre goût s'adapte vite",
-          "Remplacez les boissons sucrées par de l'eau ou des infusions",
+          "Remplacez les boissons sucrées et jus par de l'eau ou des infusions",
           "Gardez desserts et confiseries pour les occasions",
         ],
       },

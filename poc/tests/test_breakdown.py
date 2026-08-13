@@ -67,22 +67,15 @@ def test_oleic_is_a_range():
 
 def test_carb_components_count_and_names():
     c = {x.name: x for x in macro_targets(_profile(), 2500).carb_components}
-    assert len(c) == 3
+    assert len(c) == 2
     assert "Fibres" in c
-    assert "Sucres (hors lactose et galactose)" in c
+    assert "Sucres libres / ajoutés" in c
 
 
 def test_fibres_is_as_30g():
     c = {x.name: x for x in macro_targets(_profile(), 2500).carb_components}
     assert c["Fibres"].kind == "AS"
     assert c["Fibres"].grams == 30
-
-
-def test_total_sugar_is_ceiling_100g():
-    c = {x.name: x for x in macro_targets(_profile(), 2500).carb_components}
-    sucre = c["Sucres (hors lactose et galactose)"]
-    assert sucre.kind == "limite"
-    assert sucre.grams == 100
 
 
 def test_free_sugars_derived_from_percent():

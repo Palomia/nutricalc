@@ -69,20 +69,14 @@ describe("acides gras", () => {
 });
 
 describe("glucides", () => {
-  it("3 composantes", () => {
-    expect(breakdown().carbComponents).toHaveLength(3);
+  it("2 composantes", () => {
+    expect(breakdown().carbComponents).toHaveLength(2);
   });
 
   it("fibres : AS à 30 g", () => {
     const c = byName(breakdown().carbComponents);
     expect(c["Fibres"].kind).toBe("AS");
     expect(c["Fibres"].grams).toBe(30);
-  });
-
-  it("sucres totaux : limite à 100 g", () => {
-    const c = byName(breakdown().carbComponents);
-    expect(c["Sucres (hors lactose et galactose)"].kind).toBe("limite");
-    expect(c["Sucres (hors lactose et galactose)"].grams).toBe(100);
   });
 
   it("sucres libres : dérivés de 10 % AET", () => {

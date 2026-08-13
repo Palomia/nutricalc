@@ -10,8 +10,9 @@ Découpages :
     adulte, identiques hommes/femmes). Ce sont des besoins moyens, pas des RNP.
   - Acides gras : références AFSSA/ANSES (avis 2006-SA-0359, 2010), en % de
     l'AET ou en valeur absolue (EPA, DHA).
-  - Glucides : fibres (AS ANSES 2016), sucres hors lactose/galactose (limite
-    ANSES 2016), sucres libres/ajoutés (objectif OMS 2015).
+  - Glucides : fibres (AS ANSES 2016) et sucres libres/ajoutés (objectif OMS
+    2015 : sucres ajoutés, miel, sirops et jus de fruits ; hors fruits entiers
+    et lactose naturel des produits laitiers).
 
 AS = apport satisfaisant ; « limite » = valeur maximale de santé publique
 (pas une limite toxicologique) ; « OMS » = objectif de santé publique OMS.
@@ -106,7 +107,6 @@ _FATTY_ACIDS: list[tuple[str, str, str, Optional[float], Optional[float], Option
 # (nom, type, g/j fixe, % AET, note)
 _CARB_COMPONENTS: list[tuple[str, str, Optional[float], Optional[float], str]] = [
     ("Fibres", "AS", 30.0, None, "ANSES 2016"),
-    ("Sucres (hors lactose et galactose)", "limite", 100.0, None, "valeur maximale (ANSES)"),
     ("Sucres libres / ajoutés", "OMS", None, 10.0, "< 5 % AET idéalement (OMS)"),
 ]
 
