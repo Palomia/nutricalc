@@ -23,6 +23,7 @@ import {
   type MuscleBand,
   type MuscleTargets,
 } from "./calc/aminoAcids";
+import { suggestFoods, type FoodSuggestion } from "./calc/suggestions";
 import {
   DAY_KEY,
   SAVED_MEALS_KEY,
@@ -382,6 +383,51 @@ function MuscleAnalysisPanel({ analysis }: { analysis: MuscleAnalysis }) {
   );
 }
 
+// Suggestions pour compléter la journée (tâche #6/#8). Liste sobre d'aliments
+// recommandés avec leur raison ; bouton « + Ajouter » pour insérer l'aliment
+// (100 g) dans le repas « Suggestions » de la journée.
+function SuggestionsPanel({
+  suggestions,
+  onAdd,
+}: {
+  suggestions: FoodSuggestion[];
+  onAdd: (foodId: string) => void;
+}) {
+  return (
+    <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50/50 p-4">
+      <p className="text-xs font-medium uppercase tracking-wide text-emerald-700">
+        Suggestions pour compléter la journée
+      </p>
+      <p className="mt-1 text-xs text-slate-500">
+        Aliments qui amélioreraient le mieux la journée en cours (relèvent l'acide
+        aminé limitant, comblent le déficit protéique). Respectent les filtres de régime.
+      </p>
+      <ul className="mt-3 space-y-1.5">
+        {suggestions.map((s) => (
+          <li
+            key={s.food.id}
+            className="flex items-center gap-2 rounded-lg border border-emerald-100 bg-white px-3 py-1.5 text-sm"
+          >
+            <span className="font-medium text-slate-700">{s.food.name}</span>
+            <span className="truncate text-xs text-slate-500">— {s.reason}</span>
+            <span className="ml-auto shrink-0 text-xs tabular-nums text-slate-400" title="Pour 100 g">
+              {round(s.food.kcalPer100g)} kcal · P {one(s.food.proteinPer100g)}
+            </span>
+            <button
+              type="button"
+              onClick={() => onAdd(s.food.id)}
+              className="shrink-0 rounded-lg bg-emerald-600 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-700"
+              title="Ajouter 100 g au repas « Suggestions »"
+            >
+              + Ajouter
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 // Menu déroulant sobre listant les modèles enregistrés (repas ou plats) avec,
 // pour chacun, l'insertion et la suppression. Réutilise l'esthétique <details>
 // des panneaux existants.
@@ -517,9 +563,41 @@ export function MealPlanner({ target, muscleTargets }: { target?: MacroGoal; mus
     () => (muscleTargets ? analyzeMuscleProfile(day, muscleTargets) : null),
     [day, muscleTargets],
   );
+  // Aliments qui complètent le mieux la journée (respecte les filtres de régime
+  // actifs et, si fournie, la cible macro). Vide sans cibles musculaires.
+  const suggestions = useMemo(
+    () =>
+      muscleTargets
+        ? suggestFoods(day, muscleTargets, { filter: filters, macroGoal: target, limit: 4 })
+        : [],
+    [day, muscleTargets, filters, target],
+  );
 
   const addMeal = () =>
     setMeals((ms) => [...ms, { id: id(), name: `Repas ${ms.length + 1}`, dishes: [] }]);
+
+  // Insère un aliment suggéré (100 g / unité gramme) dans un repas dédié
+  // « Suggestions » — créé au besoin — pour ne pas perturber les repas saisis.
+  const SUGGESTION_MEAL = "Suggestions";
+  const addSuggestedFood = (foodId: string) =>
+    setMeals((ms) => {
+      const idx = ms.findIndex((m) => m.name === SUGGESTION_MEAL);
+      const ing: EIngredient = { id: id(), foodId, quantity: 100, unit: DEFAULT_UNIT };
+      if (idx === -1)
+        return [
+          ...ms,
+          { id: id(), name: SUGGESTION_MEAL, dishes: [{ id: id(), name: "À compléter", ingredients: [ing] }] },
+        ];
+      return ms.map((m, i) => {
+        if (i !== idx) return m;
+        if (m.dishes.length === 0)
+          return { ...m, dishes: [{ id: id(), name: "À compléter", ingredients: [ing] }] };
+        return {
+          ...m,
+          dishes: m.dishes.map((d, di) => (di === 0 ? { ...d, ingredients: [...d.ingredients, ing] } : d)),
+        };
+      });
+    });
 
   // Charge la journée type (§13) : ids frais via l'allocateur commun. Si la
   // journée n'est pas vide, on demande confirmation avant de la remplacer.
@@ -883,6 +961,10 @@ export function MealPlanner({ target, muscleTargets }: { target?: MacroGoal; mus
       </div>
 
       {analysis && meals.length > 0 && <MuscleAnalysisPanel analysis={analysis} />}
+
+      {muscleTargets && suggestions.length > 0 && (
+        <SuggestionsPanel suggestions={suggestions} onAdd={addSuggestedFood} />
+      )}
 
       <p className="mt-4 text-xs text-slate-400">
         Valeurs nutritionnelles indicatives (table CIQUAL/ANSES, pour 100 g ;
