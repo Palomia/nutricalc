@@ -163,6 +163,74 @@ const LEUCINE_STYLE: Record<LeucineLevel, { label: string; cls: string }> = {
   excellent: { label: "excellent", cls: "text-emerald-600" },
 };
 
+// Infobulle pédagogique locale (contenu UI seulement, sans effet sur le calcul).
+// Reprend le style des infobulles d'App.tsx (bordure slate, fond blanc, ombre,
+// texte xs, titres emerald-700) via une icône ⓘ, affichée au survol ET au focus
+// clavier pour rester accessible.
+interface InfoTipContent {
+  intro: string;
+  sections: { heading: string; items: string[] }[];
+}
+
+function InfoTip({ label, tip }: { label: string; tip: InfoTipContent }) {
+  return (
+    <span
+      tabIndex={0}
+      role="button"
+      aria-label={label}
+      className="group/tip relative inline-flex cursor-help items-center align-middle"
+    >
+      <span aria-hidden className="text-xs text-slate-400">ⓘ</span>
+      <div
+        role="tooltip"
+        className="pointer-events-none absolute left-0 top-full z-10 mt-1 hidden w-72 rounded-lg border border-slate-200 bg-white p-3 text-left text-xs normal-case leading-relaxed tracking-normal text-slate-600 shadow-lg group-hover/tip:block group-focus-within/tip:block"
+      >
+        <p className="mb-2 font-medium text-slate-800">{tip.intro}</p>
+        {tip.sections.map((s, i) => (
+          <div key={s.heading}>
+            <p className="font-semibold text-emerald-700">{s.heading}</p>
+            <ul className={(i < tip.sections.length - 1 ? "mb-2 " : "") + "ml-4 list-disc"}>
+              {s.items.map((x) => (
+                <li key={x}>{x}</li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </span>
+  );
+}
+
+// Explication de la « leucine anabolique » : pourquoi viser des pics répartis.
+const LEUCINE_ANABOLIC_TIP: InfoTipContent = {
+  intro:
+    "La leucine est l'acide aminé qui « déclenche » la synthèse des protéines musculaires (MPS) après un repas.",
+  sections: [
+    {
+      heading: "Un seuil à atteindre par repas",
+      items: [
+        "Il faut ~2 à 3 g de leucine (optimal ~2,5 g) et ~25 à 40 g de protéines de qualité dans une même prise pour déclencher un pic anabolique.",
+        "En dessous du seuil, la MPS n'est stimulée que partiellement.",
+      ],
+    },
+    {
+      heading: "Pourquoi répartir les pics",
+      items: [
+        "Viser 3 à 5 pics dans la journée relance la MPS plusieurs fois.",
+        "À quantité totale de protéines égale, c'est plus favorable à la construction musculaire qu'un seul gros apport.",
+      ],
+    },
+    {
+      heading: "À garder en tête",
+      items: [
+        "Ce raisonnement est PAR REPAS, distinct de la couverture JOURNALIÈRE des besoins en leucine.",
+        "Un total journalier élevé ne garantit pas que chaque prise atteigne le seuil.",
+        "Repères indicatifs (physiologie du sport), pas une prescription.",
+      ],
+    },
+  ],
+};
+
 // Ligne sous-score du score musculaire (part pondérée, 0-1).
 function SubScore({ label, value, weight }: { label: string; value: number; weight: number }) {
   return (
@@ -279,8 +347,9 @@ function MuscleAnalysisPanel({ analysis }: { analysis: MuscleAnalysis }) {
       {/* Leucine et distribution par repas (§9-10) */}
       <div className="rounded-xl border border-slate-200 bg-white p-4">
         <div className="mb-2 flex items-center justify-between">
-          <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+          <span className="inline-flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-slate-500">
             Leucine et répartition par repas
+            <InfoTip label="En savoir plus sur la leucine et les pics anaboliques" tip={LEUCINE_ANABOLIC_TIP} />
           </span>
           <span className={"text-xs font-medium " + (distribution.bonus ? "text-emerald-600" : "text-slate-400")}>
             {distribution.peaks} pic{distribution.peaks > 1 ? "s" : ""} anabolique{distribution.peaks > 1 ? "s" : ""}
