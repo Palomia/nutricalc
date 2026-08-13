@@ -1,0 +1,14 @@
+[project]
+name = "nutricalc"
+version = "0.0.0"
+description = "POC — calcul des apports journaliers recommandés (énergie, macros, micronutriments ANSES)"
+requires-python = ">=3.9"
+
+[tool.pytest.ini_options]
+# Rend le paquet `nutricalc` importable depuis les tests sans installation.
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py39"
+line-length = 100

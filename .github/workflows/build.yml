@@ -1,0 +1,31 @@
+---
+name: Build
+
+"on":
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel superseded runs per ref while iterating, but let every main commit
+# finish.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  build:
+    name: build
+    # countdown builds on Etienne's self-hosted runner; nutricalc uses a
+    # GitHub-hosted runner with Nix installed on the fly.
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+
+      - name: Build (runs the test suite via doCheck)
+        run: nix build .#default --print-build-logs
