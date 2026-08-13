@@ -8,14 +8,18 @@
 // Les types d'édition (id numérique pour les clés React) vivent ici afin d'être
 // partagés entre le composant et la couche de persistance.
 
+import { isUnit, type Unit } from "./units";
+
 // --- Types d'édition (journée en cours) ---
-export interface EIngredient { id: number; foodId: string; grams: number }
+// Un ingrédient porte une `quantity` dans une `unit` ménagère (cf. `units.ts`) ;
+// la conversion en grammes (pour les calculs) se fait à l'agrégation.
+export interface EIngredient { id: number; foodId: string; quantity: number; unit: Unit }
 export interface EDish { id: number; name: string; ingredients: EIngredient[] }
 export interface EMeal { id: number; name: string; dishes: EDish[] }
 
 // --- Modèles enregistrés : même structure, sans les ids d'édition (regénérés
 // à l'insertion pour éviter toute collision de clés React). ---
-export interface SavedIngredient { foodId: string; grams: number }
+export interface SavedIngredient { foodId: string; quantity: number; unit: Unit }
 export interface SavedDish { name: string; ingredients: SavedIngredient[] }
 export interface SavedMeal { name: string; dishes: SavedDish[] }
 
@@ -35,10 +39,23 @@ function compact<T>(items: unknown[], parse: (v: unknown) => T | null): T[] {
   return items.map(parse).filter((x): x is T => x !== null);
 }
 
+// Résout la quantité + l'unité d'un ingrédient, avec MIGRATION ascendante :
+// - nouveau format : { quantity, unit } (unité connue) ;
+// - format hérité : uniquement { grams } (données déjà en localStorage avant
+//   l'introduction des unités) → converti en { quantity: grams, unit: "gramme" }.
+// Renvoie null si aucune quantité exploitable n'est présente.
+function parseQuantityUnit(v: Record<string, unknown>): { quantity: number; unit: Unit } | null {
+  if (isNum(v.quantity) && isUnit(v.unit)) return { quantity: v.quantity, unit: v.unit };
+  if (isNum(v.grams)) return { quantity: v.grams, unit: "gramme" };
+  return null;
+}
+
 // --- Parseurs « journée » (les ids sont requis) ---
 function parseEIngredient(v: unknown): EIngredient | null {
-  if (!isRecord(v) || !isNum(v.id) || !isStr(v.foodId) || !isNum(v.grams)) return null;
-  return { id: v.id, foodId: v.foodId, grams: v.grams };
+  if (!isRecord(v) || !isNum(v.id) || !isStr(v.foodId)) return null;
+  const qu = parseQuantityUnit(v);
+  if (!qu) return null;
+  return { id: v.id, foodId: v.foodId, quantity: qu.quantity, unit: qu.unit };
 }
 function parseEDish(v: unknown): EDish | null {
   if (!isRecord(v) || !isNum(v.id) || !isStr(v.name) || !Array.isArray(v.ingredients)) return null;
@@ -51,8 +68,10 @@ function parseEMeal(v: unknown): EMeal | null {
 
 // --- Parseurs « modèles » (sans ids) ---
 function parseSavedIngredient(v: unknown): SavedIngredient | null {
-  if (!isRecord(v) || !isStr(v.foodId) || !isNum(v.grams)) return null;
-  return { foodId: v.foodId, grams: v.grams };
+  if (!isRecord(v) || !isStr(v.foodId)) return null;
+  const qu = parseQuantityUnit(v);
+  if (!qu) return null;
+  return { foodId: v.foodId, quantity: qu.quantity, unit: qu.unit };
 }
 function parseSavedDish(v: unknown): SavedDish | null {
   if (!isRecord(v) || !isStr(v.name) || !Array.isArray(v.ingredients)) return null;
@@ -111,7 +130,7 @@ export function deserializeSavedDishes(raw: string | null): SavedDish[] {
 
 // --- Conversions édition ↔ modèle ---
 export function toSavedDish(d: EDish): SavedDish {
-  return { name: d.name, ingredients: d.ingredients.map((i) => ({ foodId: i.foodId, grams: i.grams })) };
+  return { name: d.name, ingredients: d.ingredients.map((i) => ({ foodId: i.foodId, quantity: i.quantity, unit: i.unit })) };
 }
 export function toSavedMeal(m: EMeal): SavedMeal {
   return { name: m.name, dishes: m.dishes.map(toSavedDish) };
@@ -122,7 +141,7 @@ export function fromSavedDish(t: SavedDish, id: () => number): EDish {
   return {
     id: id(),
     name: t.name,
-    ingredients: t.ingredients.map((i) => ({ id: id(), foodId: i.foodId, grams: i.grams })),
+    ingredients: t.ingredients.map((i) => ({ id: id(), foodId: i.foodId, quantity: i.quantity, unit: i.unit })),
   };
 }
 export function fromSavedMeal(t: SavedMeal, id: () => number): EMeal {

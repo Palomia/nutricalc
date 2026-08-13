@@ -34,7 +34,8 @@ describe("presetDay — modèle de la journée type", () => {
       for (const dish of meal.dishes) {
         for (const ing of dish.ingredients) {
           expect(FOODS_BY_ID[ing.foodId], `foodId inconnu : ${ing.foodId}`).toBeDefined();
-          expect(ing.grams).toBeGreaterThan(0);
+          expect(ing.quantity).toBeGreaterThan(0);
+          expect(ing.unit).toBe("gramme");
         }
       }
     }
@@ -52,7 +53,7 @@ describe("presetDay — builder éditable", () => {
       meal.dishes.forEach((dish, di) => {
         const src = PRESET_DAY[mi].dishes[di];
         expect(dish.name).toBe(src.name);
-        expect(dish.ingredients.map((i) => ({ foodId: i.foodId, grams: i.grams }))).toEqual(
+        expect(dish.ingredients.map((i) => ({ foodId: i.foodId, quantity: i.quantity, unit: i.unit }))).toEqual(
           src.ingredients,
         );
       });

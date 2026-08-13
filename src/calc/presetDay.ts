@@ -23,9 +23,9 @@ export const PRESET_DAY: SavedMeal[] = [
       {
         name: "Bol du matin",
         ingredients: [
-          { foodId: "pain-baguette", grams: 60 },
-          { foodId: "yaourt-nature", grams: 125 },
-          { foodId: "banane", grams: 120 },
+          { foodId: "pain-baguette", quantity: 60, unit: "gramme" },
+          { foodId: "yaourt-nature", quantity: 125, unit: "gramme" },
+          { foodId: "banane", quantity: 120, unit: "gramme" },
         ],
       },
     ],
@@ -36,21 +36,21 @@ export const PRESET_DAY: SavedMeal[] = [
       {
         name: "Entrée",
         ingredients: [
-          { foodId: "tomate", grams: 150 },
-          { foodId: "huile-olive", grams: 5 },
+          { foodId: "tomate", quantity: 150, unit: "gramme" },
+          { foodId: "huile-olive", quantity: 5, unit: "gramme" },
         ],
       },
       {
         name: "Plat",
         ingredients: [
-          { foodId: "poulet-blanc-cuit", grams: 150 },
-          { foodId: "riz-blanc-cuit", grams: 150 },
-          { foodId: "brocoli-cuit", grams: 100 },
+          { foodId: "poulet-blanc-cuit", quantity: 150, unit: "gramme" },
+          { foodId: "riz-blanc-cuit", quantity: 150, unit: "gramme" },
+          { foodId: "brocoli-cuit", quantity: 100, unit: "gramme" },
         ],
       },
       {
         name: "Dessert",
-        ingredients: [{ foodId: "pomme", grams: 150 }],
+        ingredients: [{ foodId: "pomme", quantity: 150, unit: "gramme" }],
       },
     ],
   },
@@ -60,8 +60,8 @@ export const PRESET_DAY: SavedMeal[] = [
       {
         name: "Collation",
         ingredients: [
-          { foodId: "yaourt-nature", grams: 125 },
-          { foodId: "amandes", grams: 20 },
+          { foodId: "yaourt-nature", quantity: 125, unit: "gramme" },
+          { foodId: "amandes", quantity: 20, unit: "gramme" },
         ],
       },
     ],
@@ -72,21 +72,21 @@ export const PRESET_DAY: SavedMeal[] = [
       {
         name: "Entrée",
         ingredients: [
-          { foodId: "lentilles-cuites", grams: 100 },
-          { foodId: "tomate", grams: 100 },
+          { foodId: "lentilles-cuites", quantity: 100, unit: "gramme" },
+          { foodId: "tomate", quantity: 100, unit: "gramme" },
         ],
       },
       {
         name: "Plat",
         ingredients: [
-          { foodId: "saumon-cuit", grams: 130 },
-          { foodId: "pomme-de-terre-cuite", grams: 200 },
-          { foodId: "brocoli-cuit", grams: 120 },
+          { foodId: "saumon-cuit", quantity: 130, unit: "gramme" },
+          { foodId: "pomme-de-terre-cuite", quantity: 200, unit: "gramme" },
+          { foodId: "brocoli-cuit", quantity: 120, unit: "gramme" },
         ],
       },
       {
         name: "Dessert",
-        ingredients: [{ foodId: "yaourt-nature", grams: 125 }],
+        ingredients: [{ foodId: "yaourt-nature", quantity: 125, unit: "gramme" }],
       },
     ],
   },
