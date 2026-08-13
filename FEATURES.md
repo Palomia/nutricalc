@@ -7,17 +7,19 @@
 - [x] Énergie : BMR Mifflin-St Jeor + TDEE par niveau d'activité.
 - [x] Macronutriments : protéines (0,83 g/kg), lipides (37,5 % AET), glucides.
 - [x] Micronutriments : table de références ANSES (18 nutriments) par sexe.
-- [x] Rapport journalier assemblé + rendu texte (démo CLI).
-- [x] Suite de tests pytest, câblée dans `nix build` via `doCheck`.
+- [x] POC Python (`poc/`) : calcul + rendu texte + démo CLI, tests pytest.
+- [x] App web (racine) : Vite + React + TS + Tailwind ; logique de calcul
+      portée en TypeScript (`src/calc/`), UI formulaire → rapport, tests Vitest.
+- [x] `nix build .#default` construit et teste POC + web (contrat de la CI).
 
 ## À venir
 
-- [ ] App web : saisie du profil + affichage du rapport.
 - [ ] Modulation des références par tranche d'âge.
 - [ ] Grossesse / allaitement.
-- [ ] Export du rapport (PDF / partage).
+- [ ] Comparaison d'un apport saisi aux références (barres de couverture %).
+- [ ] Déploiement (module NixOS + Caddy, comme countdown).
 
 ## Idées
 
-- Comparer un apport saisi aux références (barres de couverture %).
 - Suggestions d'aliments couvrant les carences.
+- Export du rapport (PDF / partage).

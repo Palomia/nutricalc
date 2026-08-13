@@ -36,9 +36,9 @@ TDEE = BMR × facteur d'activité   (1,2 sédentaire … 1,9 très actif)
 - Lipides : **35-40 %** de l'apport énergétique total (AET) — on vise 37,5 %.
 - Glucides : **40-55 %** de l'AET — ici le complément de l'énergie restante.
 
-**Micronutriments.** Table de références par nutriment et par sexe
-(`micros.py`), chaque valeur étiquetée RNP (Référence Nutritionnelle pour la
-Population) ou AS (Apport Satisfaisant).
+**Micronutriments.** Table de références par nutriment et par sexe, chaque
+valeur étiquetée RNP (Référence Nutritionnelle pour la Population) ou AS
+(Apport Satisfaisant).
 
 ## Sources et fiabilité
 
@@ -49,7 +49,7 @@ pour le zinc, âge). **À revalider contre le tableau officiel ANSES avant tout
 usage réel.** Cet outil est informatif et ne remplace pas un avis médical ou
 diététique.
 
-## Limites (POC)
+## Limites
 
 - Adultes uniquement ; ni enfants, ni grossesse, ni allaitement.
 - Pas de pathologie ni de régime particulier.
@@ -57,33 +57,42 @@ diététique.
 
 ## Architecture
 
+La même logique de calcul existe en deux implémentations qui doivent rester
+d'accord (mêmes formules, mêmes valeurs, mêmes tests) :
+
 ```
-poc/nutricalc/
-  profile.py   entrées + validation
-  energy.py    BMR + TDEE
-  macros.py    répartition protéines / lipides / glucides
-  micros.py    table de références ANSES
-  report.py    assemblage + rendu texte
-  __main__.py  démo CLI (profil synthétique)
+src/calc/        app web — logique portée en TypeScript
+  profile.ts     entrées + validation
+  energy.ts      BMR + TDEE
+  macros.ts      répartition protéines / lipides / glucides
+  micros.ts      table de références ANSES
+  report.ts      assemblage
+  *.test.ts      tests Vitest
+src/App.tsx      UI : formulaire de profil → rapport
+poc/nutricalc/   proof of concept Python (mêmes formules, rendu texte + CLI)
 ```
 
-Le cœur du calcul est du Python pur (sans dépendance) : il pourra être
-transcrit tel quel en TypeScript pour l'app web, ou exposé derrière une API.
+Le POC Python a servi à figer les formules et les valeurs ; l'app web est la
+cible. Les deux suites de tests encodent les mêmes cas de référence.
 
 ## Tech
 
 Aligné sur les conventions de `countdown` (etrobert) :
 
-- **Nix flake** + **direnv** (`use flake`) pour l'environnement reproductible.
-- `nix build .#default` construit le POC et **lance pytest via `doCheck`** :
-  CI rouge si la suite échoue.
+- **Nix flake** + **direnv** (`use flake`) pour l'environnement reproductible ;
+  `node`, `pnpm`, `python` viennent du devShell.
+- App web : **pnpm + Vite + React + TypeScript + Tailwind + Vitest**.
+- `nix build .#default` construit **et teste le POC Python** via `doCheck`
+  (pytest). L'app web se construit avec `pnpm` dans le devShell (pas de
+  fixed-output derivation Nix : le sandbox n'a pas le CA du proxy
+  d'entreprise et ne peut pas joindre le registre npm). La CI teste les deux.
 - **CI GitHub Actions** sur runner `ubuntu-latest` avec Nix installé à la volée
   (countdown vise un runner self-hosted privé — non réutilisable ici).
-- Phase web à venir : pnpm + Vite + React + TypeScript + Tailwind + Vitest.
+- `base: "./"` dans la config Vite pour un service depuis un sous-chemin.
 
 ## Process
 
 1. **Repo + scaffold** aux conventions countdown. ✅
 2. **POC Python** : énergie + macros + micronutriments, testé. ✅
-3. **App web** : réutilise la logique du POC, UI de saisie du profil et
-   affichage du rapport.
+3. **App web** : logique portée en TS, UI de saisie + rapport, testée. ✅
+4. À venir : déploiement (module NixOS + Caddy), modulation par âge.

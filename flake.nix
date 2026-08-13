@@ -21,9 +21,9 @@
           python = pkgs.python3.withPackages (ps: [ ps.pytest ]);
         in
         {
-          # The Python proof-of-concept. Building it runs the test suite, so
-          # `nix build` (and CI) fails on a red suite — same contract as the
-          # web app will get later.
+          # POC Python. Le build lance pytest via doCheck : CI rouge si la
+          # suite échoue. (Le POC ne dépend que de la stdlib, donc il se
+          # construit sans accès réseau dans le sandbox Nix.)
           poc = pkgs.stdenv.mkDerivation {
             pname = "nutricalc-poc";
             version = "0.0.0";
@@ -32,7 +32,6 @@
             nativeBuildInputs = [ python ];
 
             doCheck = true;
-
             dontConfigure = true;
             buildPhase = "true";
             checkPhase = "pytest -q";
@@ -47,6 +46,10 @@
         }
       );
 
+      # L'app web se construit avec pnpm dans le devShell (pas via un
+      # fixed-output derivation Nix) : le sandbox Nix n'a pas le CA du proxy
+      # d'entreprise et ne peut pas joindre le registre npm. Le devShell, lui,
+      # hérite de la confiance CA du shell.  Voir DESIGN.md, section « Tech ».
       devShells = forAllSystems (
         system:
         let
@@ -57,7 +60,6 @@
             packages = [
               (pkgs.python3.withPackages (ps: [ ps.pytest ]))
               pkgs.ruff
-              # Provisioned ahead of the web phase (React + Vite + Tailwind).
               pkgs.nodejs
               pkgs.pnpm
             ];
