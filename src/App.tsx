@@ -1,5 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { dailyReport } from "./calc/report";
+import { MealPlanner } from "./MealPlanner";
 import {
   ACTIVITY_LEVELS,
   NUTRITION_PROFILES,
@@ -347,6 +348,15 @@ export function App() {
                   revalider. Outil informatif — ne remplace pas un avis médical ou diététique.
                 </p>
               </section>
+
+              <MealPlanner
+                target={{
+                  proteinG: result.report.macros.protein.grams,
+                  lipidG: result.report.macros.lipid.grams,
+                  carbG: result.report.macros.carb.grams,
+                  kcal: result.report.energyKcal,
+                }}
+              />
             </>
           )
         )}
