@@ -28,6 +28,50 @@ function fmtCarb(c: CarbComponent): string {
   return `${prefix}${round(c.grams ?? 0)} g/j${pct}`;
 }
 
+const FIBER_TIP = {
+  intro:
+    "Viser plus de 30 g/j est excellent pour la santé, à condition d'adapter son corps en douceur.",
+  why: [
+    "Améliore le transit et la digestion",
+    "Aide à réguler la glycémie et le cholestérol",
+    "Augmente la sensation de satiété",
+  ],
+  how: [
+    "Augmentez progressivement, sur 2 à 3 semaines",
+    "Buvez 1,5 à 2 L d'eau par jour pour aider les fibres à passer",
+    "Légumineuses (lentilles, pois chiches), céréales complètes, fruits et légumes avec la peau",
+  ],
+};
+
+function FiberNameWithTip() {
+  return (
+    <span tabIndex={0} className="group/tip relative inline-flex cursor-help items-center gap-1">
+      <span className="text-slate-600 underline decoration-dotted decoration-slate-300 underline-offset-2">
+        Fibres
+      </span>
+      <span aria-hidden className="text-xs text-slate-400">ⓘ</span>
+      <div
+        role="tooltip"
+        className="pointer-events-none absolute left-0 top-full z-10 mt-1 hidden w-72 rounded-lg border border-slate-200 bg-white p-3 text-left text-xs leading-relaxed text-slate-600 shadow-lg group-hover/tip:block group-focus-within/tip:block"
+      >
+        <p className="mb-2 font-medium text-slate-800">{FIBER_TIP.intro}</p>
+        <p className="font-semibold text-emerald-700">Pourquoi viser plus de 30 g ?</p>
+        <ul className="mb-2 ml-4 list-disc">
+          {FIBER_TIP.why.map((x) => (
+            <li key={x}>{x}</li>
+          ))}
+        </ul>
+        <p className="font-semibold text-emerald-700">Augmenter sans risque</p>
+        <ul className="ml-4 list-disc">
+          {FIBER_TIP.how.map((x) => (
+            <li key={x}>{x}</li>
+          ))}
+        </ul>
+      </div>
+    </span>
+  );
+}
+
 function NumberField(props: {
   label: string;
   value: number;
@@ -213,7 +257,11 @@ export function App() {
                       <div className="mt-2 space-y-1">
                         {result.report.macros.carbComponents.map((c) => (
                           <div key={c.name} className="flex items-baseline justify-between border-b border-slate-100 py-1 text-sm">
-                            <span className="text-slate-600" title={c.note}>{c.name}</span>
+                            {c.name === "Fibres" ? (
+                              <FiberNameWithTip />
+                            ) : (
+                              <span className="text-slate-600" title={c.note}>{c.name}</span>
+                            )}
                             <span className="tabular-nums text-slate-900">
                               {fmtCarb(c)}
                               <span className="ml-2 text-xs text-slate-400">{c.kind}</span>
