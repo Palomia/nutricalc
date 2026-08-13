@@ -89,6 +89,79 @@ function FamiliarityBadge({ level }: { level: FoodFamiliarity }) {
   );
 }
 
+// Ligne d'un ingrédient : sélecteur d'aliment (groupé par catégorie), pastille
+// de familiarité, quantité en grammes. Un petit filtre de familiarité LOCAL à
+// la ligne aide à la recherche sans impacter les autres lignes ni la liste
+// globale ; par défaut aucun filtre n'est appliqué. L'aliment déjà sélectionné
+// reste toujours proposé, même s'il ne passe pas le filtre local.
+function IngredientRow({
+  ing,
+  onChangeFood,
+  onChangeGrams,
+  onRemove,
+}: {
+  ing: EIngredient;
+  onChangeFood: (foodId: string) => void;
+  onChangeGrams: (grams: number) => void;
+  onRemove: () => void;
+}) {
+  const [familiarity, setFamiliarity] = useState<FoodFamiliarity | "tous">("tous");
+  const selectedFood = FOODS_BY_ID[ing.foodId];
+  const visible = FOODS.filter(
+    (f) => familiarity === "tous" || f.familiarity === familiarity || f.id === ing.foodId,
+  );
+  return (
+    <div className="flex items-center gap-2 text-sm">
+      <select
+        value={ing.foodId}
+        onChange={(e) => onChangeFood(e.target.value)}
+        className="flex-1 rounded border border-slate-300 bg-white px-2 py-1 focus:border-emerald-500 focus:outline-none"
+      >
+        {FOOD_CATEGORIES.map((cat) => {
+          const items = visible.filter((f) => f.category === cat);
+          if (items.length === 0) return null;
+          return (
+            <optgroup key={cat} label={cat}>
+              {items.map((f) => (
+                <option key={f.id} value={f.id}>{f.name}</option>
+              ))}
+            </optgroup>
+          );
+        })}
+      </select>
+      {selectedFood && <FamiliarityBadge level={selectedFood.familiarity} />}
+      <select
+        value={familiarity}
+        onChange={(e) => setFamiliarity(e.target.value as FoodFamiliarity | "tous")}
+        className="rounded border border-slate-300 bg-white px-1.5 py-1 text-xs text-slate-500 focus:border-emerald-500 focus:outline-none"
+        title="Filtrer la liste par familiarité (aide à la recherche)"
+        aria-label="Filtrer par familiarité"
+      >
+        <option value="tous">Familiarité : tous</option>
+        {FOOD_FAMILIARITIES.map((f) => (
+          <option key={f} value={f}>{FOOD_FAMILIARITY_LABEL[f]}</option>
+        ))}
+      </select>
+      <input
+        type="number"
+        min={0}
+        value={ing.grams}
+        onChange={(e) => onChangeGrams(Number(e.target.value))}
+        className="w-20 rounded border border-slate-300 px-2 py-1 text-right focus:border-emerald-500 focus:outline-none"
+      />
+      <span className="w-6 text-slate-400">g</span>
+      <button
+        type="button"
+        onClick={onRemove}
+        className="rounded px-1.5 text-xs text-slate-300 hover:text-red-600"
+        aria-label="Supprimer l'ingrédient"
+      >
+        ✕
+      </button>
+    </div>
+  );
+}
+
 function CoverageRow(props: { label: string; bar: string; consumed: number; target: number; unit: string }) {
   const { label, bar, consumed, target, unit } = props;
   const pct = target > 0 ? (consumed / target) * 100 : 0;
@@ -285,8 +358,6 @@ function MuscleAnalysisPanel({ analysis }: { analysis: MuscleAnalysis }) {
 
 export function MealPlanner({ target, muscleTargets }: { target?: MacroGoal; muscleTargets?: MuscleTargets }) {
   const [meals, setMeals] = useState<EMeal[]>([]);
-  // Filtre de familiarité restreignant la liste d'ingrédients ("tous" = aucun filtre).
-  const [familiarityFilter, setFamiliarityFilter] = useState<FoodFamiliarity | "tous">("tous");
   const nextId = useRef(1);
   const id = () => nextId.current++;
 
@@ -393,24 +464,6 @@ export function MealPlanner({ target, muscleTargets }: { target?: MacroGoal; mus
         </button>
       </div>
 
-      {/* Filtre de familiarité : restreint la liste d'ingrédients proposée. */}
-      <div className="mb-4 flex items-center gap-2 text-sm">
-        <label htmlFor="familiarity-filter" className="text-slate-500">
-          Familiarité des aliments
-        </label>
-        <select
-          id="familiarity-filter"
-          value={familiarityFilter}
-          onChange={(e) => setFamiliarityFilter(e.target.value as FoodFamiliarity | "tous")}
-          className="rounded border border-slate-300 bg-white px-2 py-1 focus:border-emerald-500 focus:outline-none"
-        >
-          <option value="tous">Tous les niveaux</option>
-          {FOOD_FAMILIARITIES.map((f) => (
-            <option key={f} value={f}>{FOOD_FAMILIARITY_LABEL[f]}</option>
-          ))}
-        </select>
-      </div>
-
       {meals.length === 0 ? (
         <p className="text-sm text-slate-400">
           Aucun repas. Ajoutez un repas, puis des plats et des ingrédients pour
@@ -462,56 +515,15 @@ export function MealPlanner({ target, muscleTargets }: { target?: MacroGoal; mus
                         </div>
 
                         <div className="space-y-2">
-                          {dish.ingredients.map((ing) => {
-                            const selectedFood = FOODS_BY_ID[ing.foodId];
-                            // On applique le filtre de familiarité, mais l'aliment
-                            // déjà sélectionné reste toujours proposé pour ne pas
-                            // casser la sélection en cours.
-                            const visible = FOODS.filter(
-                              (f) =>
-                                familiarityFilter === "tous" ||
-                                f.familiarity === familiarityFilter ||
-                                f.id === ing.foodId,
-                            );
-                            return (
-                            <div key={ing.id} className="flex items-center gap-2 text-sm">
-                              <select
-                                value={ing.foodId}
-                                onChange={(e) => setIngredient(meal.id, dish.id, ing.id, { foodId: e.target.value })}
-                                className="flex-1 rounded border border-slate-300 bg-white px-2 py-1 focus:border-emerald-500 focus:outline-none"
-                              >
-                                {FOOD_CATEGORIES.map((cat) => {
-                                  const items = visible.filter((f) => f.category === cat);
-                                  if (items.length === 0) return null;
-                                  return (
-                                    <optgroup key={cat} label={cat}>
-                                      {items.map((f) => (
-                                        <option key={f.id} value={f.id}>{f.name}</option>
-                                      ))}
-                                    </optgroup>
-                                  );
-                                })}
-                              </select>
-                              {selectedFood && <FamiliarityBadge level={selectedFood.familiarity} />}
-                              <input
-                                type="number"
-                                min={0}
-                                value={ing.grams}
-                                onChange={(e) => setIngredient(meal.id, dish.id, ing.id, { grams: Number(e.target.value) })}
-                                className="w-20 rounded border border-slate-300 px-2 py-1 text-right focus:border-emerald-500 focus:outline-none"
-                              />
-                              <span className="w-6 text-slate-400">g</span>
-                              <button
-                                type="button"
-                                onClick={() => removeIngredient(meal.id, dish.id, ing.id)}
-                                className="rounded px-1.5 text-xs text-slate-300 hover:text-red-600"
-                                aria-label="Supprimer l'ingrédient"
-                              >
-                                ✕
-                              </button>
-                            </div>
-                            );
-                          })}
+                          {dish.ingredients.map((ing) => (
+                            <IngredientRow
+                              key={ing.id}
+                              ing={ing}
+                              onChangeFood={(foodId) => setIngredient(meal.id, dish.id, ing.id, { foodId })}
+                              onChangeGrams={(grams) => setIngredient(meal.id, dish.id, ing.id, { grams })}
+                              onRemove={() => removeIngredient(meal.id, dish.id, ing.id)}
+                            />
+                          ))}
                           <button
                             type="button"
                             onClick={() => addIngredient(meal.id, dish.id)}
