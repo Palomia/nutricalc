@@ -46,6 +46,7 @@ import {
   type ComboIngredient,
   type CookingMethod,
 } from "./calc/cooking";
+import { buildPresetDay } from "./calc/presetDay";
 
 // Cible de comparaison, en valeurs absolues journalières.
 export interface MacroGoal {
@@ -448,6 +449,15 @@ export function MealPlanner({ target, muscleTargets }: { target?: MacroGoal; mus
   const addMeal = () =>
     setMeals((ms) => [...ms, { id: id(), name: `Repas ${ms.length + 1}`, dishes: [] }]);
 
+  // Charge la journée type (§13) : ids frais via l'allocateur commun. Si la
+  // journée n'est pas vide, on demande confirmation avant de la remplacer.
+  const loadPresetDay = () => {
+    if (meals.length > 0 && !window.confirm("Remplacer la journée en cours par une journée type ?")) {
+      return;
+    }
+    setMeals(buildPresetDay(id));
+  };
+
   const removeMeal = (mealId: number) =>
     setMeals((ms) => ms.filter((m) => m.id !== mealId));
 
@@ -602,6 +612,13 @@ export function MealPlanner({ target, muscleTargets }: { target?: MacroGoal; mus
             onInsert={insertSavedMeal}
             onDelete={deleteSavedMeal}
           />
+          <button
+            type="button"
+            onClick={loadPresetDay}
+            className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+          >
+            Charger une journée type
+          </button>
           <button
             type="button"
             onClick={addMeal}
