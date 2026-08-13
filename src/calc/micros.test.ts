@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { micronutrientReferences } from "./micros";
 import type { Profile } from "./profile";
 
-const male: Profile = { sex: "male", ageYears: 30, weightKg: 80, heightCm: 180, activity: "moderate", goal: "active" };
-const female: Profile = { sex: "female", ageYears: 30, weightKg: 65, heightCm: 165, activity: "moderate", goal: "active" };
+const male: Profile = { sex: "male", ageYears: 30, weightKg: 80, targetWeightKg: 80, heightCm: 180, goal: "active" };
+const female: Profile = { sex: "female", ageYears: 30, weightKg: 65, targetWeightKg: 65, heightCm: 165, goal: "active" };
 
 const byName = (p: Profile) =>
   Object.fromEntries(micronutrientReferences(p).map((r) => [r.name, r]));

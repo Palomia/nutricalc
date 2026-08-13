@@ -6,8 +6,8 @@ const profile = (weightKg = 80, sex: Profile["sex"] = "male"): Profile => ({
   sex,
   ageYears: 30,
   weightKg,
+  targetWeightKg: weightKg,
   heightCm: 180,
-  activity: "moderate",
   goal: "active",
 });
 

@@ -1,11 +1,6 @@
 // Besoin énergétique journalier : BMR Mifflin-St Jeor, TDEE, puis application de
 // l'objectif calorique du profil nutritionnel.
-import {
-  ACTIVITY_LEVELS,
-  NUTRITION_PROFILES,
-  type CalorieGoal,
-  type Profile,
-} from "./profile";
+import { NUTRITION_PROFILES, type CalorieGoal, type Profile } from "./profile";
 
 export function bmrMifflinStJeor(p: Profile): number {
   const base = 10 * p.weightKg + 6.25 * p.heightCm - 5 * p.ageYears;
@@ -13,9 +8,10 @@ export function bmrMifflinStJeor(p: Profile): number {
 }
 
 // Dépense énergétique totale : le BMR est calculé sur le poids réel (la dépense
-// dépend de la masse effectivement portée).
+// dépend de la masse effectivement portée), multiplié par le facteur d'activité
+// porté par l'objectif choisi.
 export function tdee(p: Profile): number {
-  return bmrMifflinStJeor(p) * ACTIVITY_LEVELS[p.activity];
+  return bmrMifflinStJeor(p) * NUTRITION_PROFILES[p.goal].activityFactor;
 }
 
 export interface EnergyTarget {
