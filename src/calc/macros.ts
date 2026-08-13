@@ -4,8 +4,12 @@
 //  - Acides aminés indispensables : besoins moyens FAO/OMS/UNU 2007 (mg/kg/j,
 //    adulte, identiques hommes/femmes ; ce sont des besoins moyens, pas des RNP).
 //  - Acides gras : références AFSSA/ANSES (avis 2006-SA-0359), en % de l'AET ou
-//    en valeur absolue (EPA, DHA). AS = apport satisfaisant ; "limite" = valeur
-//    maximale de santé publique (pas une limite toxicologique).
+//    en valeur absolue (EPA, DHA).
+//  - Glucides : fibres (AS ANSES 2016), sucres hors lactose/galactose (limite
+//    ANSES 2016), sucres libres/ajoutés (objectif OMS 2015).
+//
+// AS = apport satisfaisant ; "limite" = valeur maximale de santé publique ;
+// "OMS" = objectif de santé publique OMS (aucun n'est une limite toxicologique).
 import type { Profile } from "./profile";
 
 export const PROTEIN_G_PER_KG = 0.83;
@@ -38,12 +42,23 @@ export interface FattyAcidTarget {
   note: string;
 }
 
+export type CarbKind = "AS" | "limite" | "OMS";
+
+export interface CarbComponent {
+  name: string;
+  kind: CarbKind;
+  grams: number | null; // cible/limite g/j (fixe, ou dérivée du % d'AET)
+  percentAet: number | null; // part de l'AET en %, si applicable
+  note: string;
+}
+
 export interface MacroTargets {
   protein: MacroTarget;
   lipid: MacroTarget;
   carb: MacroTarget;
   aminoAcids: AminoAcid[]; // découpage des protéines
   fattyAcids: FattyAcidTarget[]; // découpage des lipides
+  carbComponents: CarbComponent[]; // découpage des glucides
 }
 
 // Besoins moyens en acides aminés indispensables, adulte (FAO/WHO/UNU 2007).
@@ -80,6 +95,21 @@ const FATTY_ACIDS: FattyAcidRow[] = [
   { name: "DHA", family: "Poly-insaturés ω-3", kind: "AS", percentAet: null, percentAetMax: null, milligrams: 250, note: "EPA + DHA : 500 mg/j" },
 ];
 
+interface CarbRow {
+  name: string;
+  kind: CarbKind;
+  gramsFixed: number | null;
+  percentAet: number | null;
+  note: string;
+}
+
+// Découpage des glucides, adulte (ANSES 2016 + OMS 2015).
+const CARB_COMPONENTS: CarbRow[] = [
+  { name: "Fibres", kind: "AS", gramsFixed: 30, percentAet: null, note: "ANSES 2016" },
+  { name: "Sucres (hors lactose et galactose)", kind: "limite", gramsFixed: 100, percentAet: null, note: "valeur maximale (ANSES)" },
+  { name: "Sucres libres / ajoutés", kind: "OMS", gramsFixed: null, percentAet: 10, note: "< 5 % AET idéalement (OMS)" },
+];
+
 export function aminoAcidTargets(p: Profile): AminoAcid[] {
   return AMINO_ACIDS_MG_PER_KG.map(([name, mgPerKg]) => ({
     name,
@@ -104,6 +134,21 @@ export function fattyAcidTargets(energyKcal: number): FattyAcidTarget[] {
   }));
 }
 
+export function carbComponents(energyKcal: number): CarbComponent[] {
+  return CARB_COMPONENTS.map((r) => ({
+    name: r.name,
+    kind: r.kind,
+    grams:
+      r.gramsFixed !== null
+        ? r.gramsFixed
+        : r.percentAet !== null
+          ? (r.percentAet / 100) * energyKcal / KCAL_PER_G.carb
+          : null,
+    percentAet: r.percentAet,
+    note: r.note,
+  }));
+}
+
 export function macroTargets(p: Profile, energyKcal: number): MacroTargets {
   if (energyKcal <= 0)
     throw new Error("L'apport énergétique doit être strictement positif.");
@@ -124,5 +169,6 @@ export function macroTargets(p: Profile, energyKcal: number): MacroTargets {
     carb: { grams: carbG, kcal: carbKcal, percentAet: carbKcal / energyKcal },
     aminoAcids: aminoAcidTargets(p),
     fattyAcids: fattyAcidTargets(energyKcal),
+    carbComponents: carbComponents(energyKcal),
   };
 }

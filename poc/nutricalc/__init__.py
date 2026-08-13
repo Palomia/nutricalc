@@ -13,10 +13,12 @@ from .profile import ActivityLevel, Profile, Sex
 from .energy import bmr_mifflin_st_jeor, tdee
 from .macros import (
     AminoAcid,
+    CarbComponent,
     FattyAcidTarget,
     MacroTarget,
     MacroTargets,
     amino_acid_targets,
+    carb_components,
     fatty_acid_targets,
     macro_targets,
 )
@@ -30,10 +32,12 @@ __all__ = [
     "bmr_mifflin_st_jeor",
     "tdee",
     "AminoAcid",
+    "CarbComponent",
     "FattyAcidTarget",
     "MacroTarget",
     "MacroTargets",
     "amino_acid_targets",
+    "carb_components",
     "fatty_acid_targets",
     "macro_targets",
     "MicroReference",

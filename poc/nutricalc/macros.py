@@ -3,15 +3,18 @@
 Références ANSES pour l'adulte :
   - Protéines : RNP 0,83 g/kg/j, découpées en acides aminés indispensables.
   - Lipides   : 35-40 % de l'AET, découpés en familles d'acides gras.
-  - Glucides  : 40-55 % de l'AET — ici le complément de l'énergie restante.
+  - Glucides  : 40-55 % de l'AET (complément), découpés en fibres et sucres.
 
 Découpages :
   - Acides aminés indispensables : besoins moyens FAO/OMS/UNU 2007 (mg/kg/j,
     adulte, identiques hommes/femmes). Ce sont des besoins moyens, pas des RNP.
   - Acides gras : références AFSSA/ANSES (avis 2006-SA-0359, 2010), en % de
-    l'AET ou en valeur absolue (EPA, DHA). AS = apport satisfaisant ;
-    « limite » = valeur maximale de santé publique (pas une limite
-    toxicologique).
+    l'AET ou en valeur absolue (EPA, DHA).
+  - Glucides : fibres (AS ANSES 2016), sucres hors lactose/galactose (limite
+    ANSES 2016), sucres libres/ajoutés (objectif OMS 2015).
+
+AS = apport satisfaisant ; « limite » = valeur maximale de santé publique
+(pas une limite toxicologique) ; « OMS » = objectif de santé publique OMS.
 """
 
 from __future__ import annotations
@@ -55,12 +58,22 @@ class FattyAcidTarget:
 
 
 @dataclass(frozen=True)
+class CarbComponent:
+    name: str
+    kind: str  # "AS" | "limite" | "OMS"
+    grams: Optional[float]  # cible/limite en g/j (fixe, ou dérivée du % d'AET)
+    percent_aet: Optional[float]  # part de l'AET en %, si applicable
+    note: str = ""
+
+
+@dataclass(frozen=True)
 class MacroTargets:
     protein: MacroTarget
     lipid: MacroTarget
     carb: MacroTarget
     amino_acids: list[AminoAcid]  # découpage des protéines
     fatty_acids: list[FattyAcidTarget]  # découpage des lipides
+    carb_components: list[CarbComponent]  # découpage des glucides
 
 
 # Besoins moyens en acides aminés indispensables, adulte (>18 ans).
@@ -87,6 +100,14 @@ _FATTY_ACIDS: list[tuple[str, str, str, Optional[float], Optional[float], Option
     ("Acide α-linolénique (ALA, ω-3)", "Poly-insaturés ω-3", "AS", 1.0, None, None, ""),
     ("EPA", "Poly-insaturés ω-3", "AS", None, None, 250.0, "EPA + DHA : 500 mg/j"),
     ("DHA", "Poly-insaturés ω-3", "AS", None, None, 250.0, "EPA + DHA : 500 mg/j"),
+]
+
+# Découpage des glucides, adulte.
+# (nom, type, g/j fixe, % AET, note)
+_CARB_COMPONENTS: list[tuple[str, str, Optional[float], Optional[float], str]] = [
+    ("Fibres", "AS", 30.0, None, "ANSES 2016"),
+    ("Sucres (hors lactose et galactose)", "limite", 100.0, None, "valeur maximale (ANSES)"),
+    ("Sucres libres / ajoutés", "OMS", None, 10.0, "< 5 % AET idéalement (OMS)"),
 ]
 
 
@@ -122,9 +143,21 @@ def fatty_acid_targets(energy_kcal: float) -> list[FattyAcidTarget]:
     return out
 
 
+def carb_components(energy_kcal: float) -> list[CarbComponent]:
+    """Découpage des glucides ; les valeurs en % AET sont converties en g/j."""
+    out: list[CarbComponent] = []
+    for name, kind, grams_fixed, pct, note in _CARB_COMPONENTS:
+        grams = grams_fixed
+        if grams is None and pct is not None:
+            grams = pct / 100 * energy_kcal / KCAL_PER_G["carb"]
+        out.append(CarbComponent(name=name, kind=kind, grams=grams, percent_aet=pct, note=note))
+    return out
+
+
 def macro_targets(profile: Profile, energy_kcal: float) -> MacroTargets:
     """Répartit l'apport énergétique en protéines, lipides et glucides, avec
-    le découpage des protéines (acides aminés) et des lipides (acides gras)."""
+    le découpage des protéines (acides aminés), des lipides (acides gras) et
+    des glucides (fibres, sucres)."""
     if energy_kcal <= 0:
         raise ValueError("L'apport énergétique doit être strictement positif.")
 
@@ -144,4 +177,5 @@ def macro_targets(profile: Profile, energy_kcal: float) -> MacroTargets:
         carb=MacroTarget(carb_g, carb_kcal, carb_kcal / energy_kcal),
         amino_acids=amino_acid_targets(profile),
         fatty_acids=fatty_acid_targets(energy_kcal),
+        carb_components=carb_components(energy_kcal),
     )

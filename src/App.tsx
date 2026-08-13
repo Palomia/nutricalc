@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { dailyReport } from "./calc/report";
 import { ACTIVITY_LEVELS, type ActivityLevel, type Profile, type Sex } from "./calc/profile";
-import type { FattyAcidTarget, MacroTarget } from "./calc/macros";
+import type { CarbComponent, FattyAcidTarget, MacroTarget } from "./calc/macros";
 
 const ACTIVITY_LABELS: Record<ActivityLevel, string> = {
   sedentary: "Sédentaire",
@@ -20,6 +20,12 @@ function fmtFattyAcid(fa: FattyAcidTarget): string {
     return `${fa.percentAet}–${fa.percentAetMax} % AET · ≈ ${round(fa.grams)}–${round(fa.gramsMax)} g`;
   const prefix = fa.kind === "limite" ? "≤ " : "";
   return `${prefix}${fa.percentAet} % AET · ≈ ${round(fa.grams ?? 0)} g`;
+}
+
+function fmtCarb(c: CarbComponent): string {
+  const prefix = c.kind === "limite" ? "≤ " : c.kind === "OMS" ? "< " : "";
+  const pct = c.percentAet !== null ? ` (${c.percentAet} % AET)` : "";
+  return `${prefix}${round(c.grams ?? 0)} g/j${pct}`;
 }
 
 function NumberField(props: {
@@ -199,7 +205,24 @@ export function App() {
                     </details>
                   </MacroRow>
 
-                  <MacroRow label="Glucides" bar="bg-emerald-500" target={result.report.macros.carb} />
+                  <MacroRow label="Glucides" bar="bg-emerald-500" target={result.report.macros.carb}>
+                    <details className="group mt-2">
+                      <summary className="cursor-pointer text-xs text-emerald-700 hover:underline">
+                        Fibres et sucres — références ANSES/OMS
+                      </summary>
+                      <div className="mt-2 space-y-1">
+                        {result.report.macros.carbComponents.map((c) => (
+                          <div key={c.name} className="flex items-baseline justify-between border-b border-slate-100 py-1 text-sm">
+                            <span className="text-slate-600" title={c.note}>{c.name}</span>
+                            <span className="tabular-nums text-slate-900">
+                              {fmtCarb(c)}
+                              <span className="ml-2 text-xs text-slate-400">{c.kind}</span>
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </details>
+                  </MacroRow>
                 </div>
               </section>
 
