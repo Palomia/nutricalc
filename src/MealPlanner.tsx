@@ -8,7 +8,7 @@
 // minimale (grammes de macro + kcal), pour être câblé dans App.tsx en une ligne
 // quelle que soit la manière dont la cible est calculée.
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FOODS, FOODS_BY_ID, FOOD_CATEGORIES } from "./calc/food";
+import { FOODS, FOODS_BY_ID, FOOD_CATEGORIES, filterFoods, type FoodFilter } from "./calc/food";
 import {
   dayMacros,
   dishMacros,
@@ -90,6 +90,21 @@ function MacroPills({ m }: { m: MacroIntake }) {
     <span className="tabular-nums text-slate-500">
       {round(m.kcal)} kcal · P {round(m.proteinG)} · L {round(m.lipidG)} · G {round(m.carbG)} (g)
     </span>
+  );
+}
+
+// Case à cocher sobre pour la barre de filtres de régime.
+function FilterCheckbox({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <label className="flex cursor-pointer items-center gap-1.5 text-slate-700">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+      />
+      {label}
+    </label>
   );
 }
 
@@ -357,6 +372,34 @@ export function MealPlanner({ target, muscleTargets }: { target?: MacroGoal; mus
   useEffect(() => saveRaw(SAVED_MEALS_KEY, serializeSaved(savedMeals)), [savedMeals]);
   useEffect(() => saveRaw(SAVED_DISHES_KEY, serializeSaved(savedDishes)), [savedDishes]);
 
+  // Filtres de régime appliqués aux aliments proposés dans les <select>.
+  const [filters, setFilters] = useState<FoodFilter>({});
+  const filteredFoods = useMemo(() => filterFoods(FOODS, filters), [filters]);
+
+  // Options d'un <select> d'ingrédient, groupées par catégorie et restreintes
+  // au filtre. L'aliment déjà sélectionné est toujours conservé (même s'il ne
+  // passe plus le filtre) et signalé « hors filtre », pour ne pas le faire
+  // disparaître silencieusement et corrompre le state.
+  const foodOptions = (selectedId: string) => {
+    const selected = FOODS_BY_ID[selectedId];
+    const outsideFilter = !!selected && !filteredFoods.some((f) => f.id === selectedId);
+    return FOOD_CATEGORIES.map((cat) => {
+      const foods = filteredFoods.filter((f) => f.category === cat);
+      if (outsideFilter && selected.category === cat) foods.push(selected);
+      if (foods.length === 0) return null;
+      return (
+        <optgroup key={cat} label={cat}>
+          {foods.map((f) => (
+            <option key={f.id} value={f.id}>
+              {outsideFilter && f.id === selectedId ? `${f.name} (hors filtre)` : f.name}
+            </option>
+          ))}
+        </optgroup>
+      );
+    });
+  };
+
+
   const day = useMemo(() => toDay(meals), [meals]);
   const total = useMemo(() => dayMacros(day), [day]);
   const analysis = useMemo(
@@ -404,7 +447,7 @@ export function MealPlanner({ target, muscleTargets }: { target?: MacroGoal; mus
               ...m,
               dishes: m.dishes.map((d) =>
                 d.id === dishId
-                  ? { ...d, ingredients: [...d.ingredients, { id: id(), foodId: FOODS[0].id, grams: 100 }] }
+                  ? { ...d, ingredients: [...d.ingredients, { id: id(), foodId: (filteredFoods[0] ?? FOODS[0]).id, grams: 100 }] }
                   : d,
               ),
             }
@@ -505,6 +548,15 @@ export function MealPlanner({ target, muscleTargets }: { target?: MacroGoal; mus
         </div>
       </div>
 
+      {/* Barre de filtres : restreint les aliments proposés dans tous les
+          <select> d'ingrédients. */}
+      <div className="mb-4 flex flex-wrap items-center gap-4 rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2 text-sm">
+        <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Filtres</span>
+        <FilterCheckbox label="Végétarien" checked={!!filters.vegetarian} onChange={(v) => setFilters((f) => ({ ...f, vegetarian: v }))} />
+        <FilterCheckbox label="Vegan" checked={!!filters.vegan} onChange={(v) => setFilters((f) => ({ ...f, vegan: v }))} />
+        <FilterCheckbox label="Non transformé" checked={!!filters.unprocessed} onChange={(v) => setFilters((f) => ({ ...f, unprocessed: v }))} />
+      </div>
+
       {meals.length === 0 ? (
         <p className="text-sm text-slate-400">
           Aucun repas. Ajoutez un repas, puis des plats et des ingrédients pour
@@ -577,13 +629,7 @@ export function MealPlanner({ target, muscleTargets }: { target?: MacroGoal; mus
                                 onChange={(e) => setIngredient(meal.id, dish.id, ing.id, { foodId: e.target.value })}
                                 className="flex-1 rounded border border-slate-300 bg-white px-2 py-1 focus:border-emerald-500 focus:outline-none"
                               >
-                                {FOOD_CATEGORIES.map((cat) => (
-                                  <optgroup key={cat} label={cat}>
-                                    {FOODS.filter((f) => f.category === cat).map((f) => (
-                                      <option key={f.id} value={f.id}>{f.name}</option>
-                                    ))}
-                                  </optgroup>
-                                ))}
+                                {foodOptions(ing.foodId)}
                               </select>
                               <input
                                 type="number"

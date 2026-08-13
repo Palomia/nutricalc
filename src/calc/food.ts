@@ -67,37 +67,50 @@ export interface Food {
   // négligeables — huiles, fruits, légumes aqueux — dont les AAE ne comptent pas).
   aaProfile?: AminoAcidProfileKey;
   proteinQuality?: ProteinQualityTier;
+  // --- Attributs de régime alimentaire (tâche #7) ---
+  // Végétarien : aucune chair animale (ni viande, ni poisson, ni fruits de
+  // mer). Les œufs et les produits laitiers restent autorisés.
+  vegetarian: boolean;
+  // Vegan : aucun produit d'origine animale (ni viande/poisson, ni œufs, ni
+  // laitages, ni miel…). Par cohérence : vegan ⇒ vegetarian.
+  vegan: boolean;
+  // Non transformé : aliment brut ou peu transformé, dans l'esprit du groupe 1
+  // de la classification NOVA (fruits, légumes, œufs, viandes/poissons nature,
+  // légumes secs, oléagineux nature, lait/yaourt nature…). Les produits ayant
+  // subi une transformation notable (pain, pâtes, fromage affiné, huile
+  // raffinée…) sont considérés comme transformés (false).
+  unprocessed: boolean;
 }
 
 // Petite base de départ (aliments génériques CIQUAL). À enrichir au besoin.
 export const FOODS: Food[] = [
   // Féculents & pains
-  { id: "riz-blanc-cuit", name: "Riz blanc, cuit", category: "Féculents & pains", kcalPer100g: 143, proteinPer100g: 2.9, lipidPer100g: 0.4, carbPer100g: 31.8, aaProfile: "cereal", proteinQuality: "faible" },
-  { id: "pates-cuites", name: "Pâtes, cuites", category: "Féculents & pains", kcalPer100g: 151, proteinPer100g: 4.9, lipidPer100g: 0.8, carbPer100g: 29.7, aaProfile: "cereal", proteinQuality: "faible" },
-  { id: "pain-baguette", name: "Pain, baguette courante", category: "Féculents & pains", kcalPer100g: 274, proteinPer100g: 8.6, lipidPer100g: 2.5, carbPer100g: 54.2, aaProfile: "cereal", proteinQuality: "faible" },
-  { id: "pomme-de-terre-cuite", name: "Pomme de terre, cuite à l'eau", category: "Féculents & pains", kcalPer100g: 73, proteinPer100g: 2.0, lipidPer100g: 0.1, carbPer100g: 15.0, aaProfile: "legume", proteinQuality: "faible" },
-  { id: "lentilles-cuites", name: "Lentilles, cuites", category: "Féculents & pains", kcalPer100g: 116, proteinPer100g: 10.1, lipidPer100g: 0.6, carbPer100g: 15.2, aaProfile: "legume", proteinQuality: "moyen" },
+  { id: "riz-blanc-cuit", name: "Riz blanc, cuit", category: "Féculents & pains", kcalPer100g: 143, proteinPer100g: 2.9, lipidPer100g: 0.4, carbPer100g: 31.8, aaProfile: "cereal", proteinQuality: "faible", vegetarian: true, vegan: true, unprocessed: true },
+  { id: "pates-cuites", name: "Pâtes, cuites", category: "Féculents & pains", kcalPer100g: 151, proteinPer100g: 4.9, lipidPer100g: 0.8, carbPer100g: 29.7, aaProfile: "cereal", proteinQuality: "faible", vegetarian: true, vegan: true, unprocessed: false },
+  { id: "pain-baguette", name: "Pain, baguette courante", category: "Féculents & pains", kcalPer100g: 274, proteinPer100g: 8.6, lipidPer100g: 2.5, carbPer100g: 54.2, aaProfile: "cereal", proteinQuality: "faible", vegetarian: true, vegan: true, unprocessed: false },
+  { id: "pomme-de-terre-cuite", name: "Pomme de terre, cuite à l'eau", category: "Féculents & pains", kcalPer100g: 73, proteinPer100g: 2.0, lipidPer100g: 0.1, carbPer100g: 15.0, aaProfile: "legume", proteinQuality: "faible", vegetarian: true, vegan: true, unprocessed: true },
+  { id: "lentilles-cuites", name: "Lentilles, cuites", category: "Féculents & pains", kcalPer100g: 116, proteinPer100g: 10.1, lipidPer100g: 0.6, carbPer100g: 15.2, aaProfile: "legume", proteinQuality: "moyen", vegetarian: true, vegan: true, unprocessed: true },
 
   // Viandes, poissons, œufs
-  { id: "poulet-blanc-cuit", name: "Blanc de poulet, cuit", category: "Viandes, poissons, œufs", kcalPer100g: 137, proteinPer100g: 29.2, lipidPer100g: 1.8, carbPer100g: 1.2, aaProfile: "meat", proteinQuality: "excellent" },
-  { id: "steak-hache-15-cuit", name: "Steak haché de bœuf 15% MG, cuit", category: "Viandes, poissons, œufs", kcalPer100g: 239, proteinPer100g: 23.6, lipidPer100g: 16.1, carbPer100g: 0, aaProfile: "meat", proteinQuality: "excellent" },
-  { id: "saumon-cuit", name: "Saumon, cuit au four", category: "Viandes, poissons, œufs", kcalPer100g: 210, proteinPer100g: 22.1, lipidPer100g: 13.5, carbPer100g: 0, aaProfile: "fish", proteinQuality: "excellent" },
-  { id: "oeuf-dur", name: "Œuf, cuit dur", category: "Viandes, poissons, œufs", kcalPer100g: 134, proteinPer100g: 13.5, lipidPer100g: 8.6, carbPer100g: 0.5, aaProfile: "egg", proteinQuality: "excellent" },
+  { id: "poulet-blanc-cuit", name: "Blanc de poulet, cuit", category: "Viandes, poissons, œufs", kcalPer100g: 137, proteinPer100g: 29.2, lipidPer100g: 1.8, carbPer100g: 1.2, aaProfile: "meat", proteinQuality: "excellent", vegetarian: false, vegan: false, unprocessed: true },
+  { id: "steak-hache-15-cuit", name: "Steak haché de bœuf 15% MG, cuit", category: "Viandes, poissons, œufs", kcalPer100g: 239, proteinPer100g: 23.6, lipidPer100g: 16.1, carbPer100g: 0, aaProfile: "meat", proteinQuality: "excellent", vegetarian: false, vegan: false, unprocessed: true },
+  { id: "saumon-cuit", name: "Saumon, cuit au four", category: "Viandes, poissons, œufs", kcalPer100g: 210, proteinPer100g: 22.1, lipidPer100g: 13.5, carbPer100g: 0, aaProfile: "fish", proteinQuality: "excellent", vegetarian: false, vegan: false, unprocessed: true },
+  { id: "oeuf-dur", name: "Œuf, cuit dur", category: "Viandes, poissons, œufs", kcalPer100g: 134, proteinPer100g: 13.5, lipidPer100g: 8.6, carbPer100g: 0.5, aaProfile: "egg", proteinQuality: "excellent", vegetarian: true, vegan: false, unprocessed: true },
 
   // Produits laitiers
-  { id: "emmental", name: "Emmental", category: "Produits laitiers", kcalPer100g: 380, proteinPer100g: 28.2, lipidPer100g: 28.3, carbPer100g: 0, aaProfile: "dairy", proteinQuality: "excellent" },
-  { id: "lait-demi-ecreme", name: "Lait demi-écrémé, UHT", category: "Produits laitiers", kcalPer100g: 46, proteinPer100g: 3.3, lipidPer100g: 1.5, carbPer100g: 4.8, aaProfile: "dairy", proteinQuality: "excellent" },
-  { id: "yaourt-nature", name: "Yaourt nature", category: "Produits laitiers", kcalPer100g: 57, proteinPer100g: 4.2, lipidPer100g: 2.7, carbPer100g: 3.7, aaProfile: "dairy", proteinQuality: "excellent" },
+  { id: "emmental", name: "Emmental", category: "Produits laitiers", kcalPer100g: 380, proteinPer100g: 28.2, lipidPer100g: 28.3, carbPer100g: 0, aaProfile: "dairy", proteinQuality: "excellent", vegetarian: true, vegan: false, unprocessed: false },
+  { id: "lait-demi-ecreme", name: "Lait demi-écrémé, UHT", category: "Produits laitiers", kcalPer100g: 46, proteinPer100g: 3.3, lipidPer100g: 1.5, carbPer100g: 4.8, aaProfile: "dairy", proteinQuality: "excellent", vegetarian: true, vegan: false, unprocessed: true },
+  { id: "yaourt-nature", name: "Yaourt nature", category: "Produits laitiers", kcalPer100g: 57, proteinPer100g: 4.2, lipidPer100g: 2.7, carbPer100g: 3.7, aaProfile: "dairy", proteinQuality: "excellent", vegetarian: true, vegan: false, unprocessed: true },
 
   // Fruits & légumes (protéines négligeables : pas de découpage AAE)
-  { id: "pomme", name: "Pomme, crue", category: "Fruits & légumes", kcalPer100g: 52, proteinPer100g: 0.3, lipidPer100g: 0.3, carbPer100g: 11.6 },
-  { id: "banane", name: "Banane, crue", category: "Fruits & légumes", kcalPer100g: 90, proteinPer100g: 1.0, lipidPer100g: 0.3, carbPer100g: 19.6 },
-  { id: "tomate", name: "Tomate, crue", category: "Fruits & légumes", kcalPer100g: 18, proteinPer100g: 0.9, lipidPer100g: 0.3, carbPer100g: 2.3 },
-  { id: "brocoli-cuit", name: "Brocoli, cuit", category: "Fruits & légumes", kcalPer100g: 26, proteinPer100g: 2.1, lipidPer100g: 0.8, carbPer100g: 1.1 },
+  { id: "pomme", name: "Pomme, crue", category: "Fruits & légumes", kcalPer100g: 52, proteinPer100g: 0.3, lipidPer100g: 0.3, carbPer100g: 11.6, vegetarian: true, vegan: true, unprocessed: true },
+  { id: "banane", name: "Banane, crue", category: "Fruits & légumes", kcalPer100g: 90, proteinPer100g: 1.0, lipidPer100g: 0.3, carbPer100g: 19.6, vegetarian: true, vegan: true, unprocessed: true },
+  { id: "tomate", name: "Tomate, crue", category: "Fruits & légumes", kcalPer100g: 18, proteinPer100g: 0.9, lipidPer100g: 0.3, carbPer100g: 2.3, vegetarian: true, vegan: true, unprocessed: true },
+  { id: "brocoli-cuit", name: "Brocoli, cuit", category: "Fruits & légumes", kcalPer100g: 26, proteinPer100g: 2.1, lipidPer100g: 0.8, carbPer100g: 1.1, vegetarian: true, vegan: true, unprocessed: true },
 
   // Matières grasses & oléagineux
-  { id: "huile-olive", name: "Huile d'olive", category: "Matières grasses & oléagineux", kcalPer100g: 900, proteinPer100g: 0, lipidPer100g: 100, carbPer100g: 0 },
-  { id: "amandes", name: "Amandes", category: "Matières grasses & oléagineux", kcalPer100g: 630, proteinPer100g: 21.1, lipidPer100g: 53.4, carbPer100g: 7.9, aaProfile: "nuts", proteinQuality: "faible" },
+  { id: "huile-olive", name: "Huile d'olive", category: "Matières grasses & oléagineux", kcalPer100g: 900, proteinPer100g: 0, lipidPer100g: 100, carbPer100g: 0, vegetarian: true, vegan: true, unprocessed: false },
+  { id: "amandes", name: "Amandes", category: "Matières grasses & oléagineux", kcalPer100g: 630, proteinPer100g: 21.1, lipidPer100g: 53.4, carbPer100g: 7.9, aaProfile: "nuts", proteinQuality: "faible", vegetarian: true, vegan: true, unprocessed: true },
 ];
 
 export const FOODS_BY_ID: Record<string, Food> = Object.fromEntries(
@@ -111,3 +124,23 @@ export const FOOD_CATEGORIES: FoodCategory[] = [
   "Fruits & légumes",
   "Matières grasses & oléagineux",
 ];
+
+// Critères de filtrage par régime. Chaque champ est optionnel : quand il vaut
+// `true` on n'exige que les aliments qui satisfont le critère ; quand il est
+// absent (ou `false`) le critère n'est pas appliqué (aucune restriction).
+export interface FoodFilter {
+  vegetarian?: boolean;
+  vegan?: boolean;
+  unprocessed?: boolean;
+}
+
+// Filtre pur : renvoie les aliments qui satisfont TOUS les critères actifs
+// (ET logique). Un critère à `false`/absent est ignoré. Ne mute pas l'entrée.
+export function filterFoods(foods: Food[], filter: FoodFilter): Food[] {
+  return foods.filter(
+    (f) =>
+      (!filter.vegetarian || f.vegetarian) &&
+      (!filter.vegan || f.vegan) &&
+      (!filter.unprocessed || f.unprocessed),
+  );
+}
