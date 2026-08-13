@@ -12,10 +12,12 @@ import type { Food } from "./food";
 const rice: Food = {
   id: "riz-test", name: "Riz test", category: "Féculents & pains",
   kcalPer100g: 100, proteinPer100g: 2, lipidPer100g: 1, carbPer100g: 20,
+  vegetarian: true, vegan: true, unprocessed: true,
 };
 const chicken: Food = {
   id: "poulet-test", name: "Poulet test", category: "Viandes, poissons, œufs",
   kcalPer100g: 120, proteinPer100g: 30, lipidPer100g: 2, carbPer100g: 0,
+  vegetarian: false, vegan: false, unprocessed: true,
 };
 
 describe("intake", () => {
