@@ -8,7 +8,14 @@
 // minimale (grammes de macro + kcal), pour être câblé dans App.tsx en une ligne
 // quelle que soit la manière dont la cible est calculée.
 import { useMemo, useRef, useState } from "react";
-import { FOODS, FOODS_BY_ID, FOOD_CATEGORIES } from "./calc/food";
+import {
+  FOODS,
+  FOODS_BY_ID,
+  FOOD_CATEGORIES,
+  FOOD_FAMILIARITIES,
+  FOOD_FAMILIARITY_LABEL,
+  type FoodFamiliarity,
+} from "./calc/food";
 import {
   dayMacros,
   dishMacros,
@@ -60,6 +67,24 @@ function MacroPills({ m }: { m: MacroIntake }) {
   return (
     <span className="tabular-nums text-slate-500">
       {round(m.kcal)} kcal · P {round(m.proteinG)} · L {round(m.lipidG)} · G {round(m.carbG)} (g)
+    </span>
+  );
+}
+
+// Pastille discrète indiquant le degré de familiarité d'un aliment.
+const FAMILIARITY_BADGE: Record<FoodFamiliarity, string> = {
+  classique: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  moyen: "border-amber-200 bg-amber-50 text-amber-700",
+  exotique: "border-violet-200 bg-violet-50 text-violet-700",
+};
+
+function FamiliarityBadge({ level }: { level: FoodFamiliarity }) {
+  return (
+    <span
+      className={"shrink-0 rounded-full border px-1.5 py-0.5 text-[10px] font-medium " + FAMILIARITY_BADGE[level]}
+      title={`Familiarité : ${FOOD_FAMILIARITY_LABEL[level]}`}
+    >
+      {FOOD_FAMILIARITY_LABEL[level]}
     </span>
   );
 }
@@ -260,6 +285,8 @@ function MuscleAnalysisPanel({ analysis }: { analysis: MuscleAnalysis }) {
 
 export function MealPlanner({ target, muscleTargets }: { target?: MacroGoal; muscleTargets?: MuscleTargets }) {
   const [meals, setMeals] = useState<EMeal[]>([]);
+  // Filtre de familiarité restreignant la liste d'ingrédients ("tous" = aucun filtre).
+  const [familiarityFilter, setFamiliarityFilter] = useState<FoodFamiliarity | "tous">("tous");
   const nextId = useRef(1);
   const id = () => nextId.current++;
 
@@ -366,6 +393,24 @@ export function MealPlanner({ target, muscleTargets }: { target?: MacroGoal; mus
         </button>
       </div>
 
+      {/* Filtre de familiarité : restreint la liste d'ingrédients proposée. */}
+      <div className="mb-4 flex items-center gap-2 text-sm">
+        <label htmlFor="familiarity-filter" className="text-slate-500">
+          Familiarité des aliments
+        </label>
+        <select
+          id="familiarity-filter"
+          value={familiarityFilter}
+          onChange={(e) => setFamiliarityFilter(e.target.value as FoodFamiliarity | "tous")}
+          className="rounded border border-slate-300 bg-white px-2 py-1 focus:border-emerald-500 focus:outline-none"
+        >
+          <option value="tous">Tous les niveaux</option>
+          {FOOD_FAMILIARITIES.map((f) => (
+            <option key={f} value={f}>{FOOD_FAMILIARITY_LABEL[f]}</option>
+          ))}
+        </select>
+      </div>
+
       {meals.length === 0 ? (
         <p className="text-sm text-slate-400">
           Aucun repas. Ajoutez un repas, puis des plats et des ingrédients pour
@@ -417,21 +462,37 @@ export function MealPlanner({ target, muscleTargets }: { target?: MacroGoal; mus
                         </div>
 
                         <div className="space-y-2">
-                          {dish.ingredients.map((ing) => (
+                          {dish.ingredients.map((ing) => {
+                            const selectedFood = FOODS_BY_ID[ing.foodId];
+                            // On applique le filtre de familiarité, mais l'aliment
+                            // déjà sélectionné reste toujours proposé pour ne pas
+                            // casser la sélection en cours.
+                            const visible = FOODS.filter(
+                              (f) =>
+                                familiarityFilter === "tous" ||
+                                f.familiarity === familiarityFilter ||
+                                f.id === ing.foodId,
+                            );
+                            return (
                             <div key={ing.id} className="flex items-center gap-2 text-sm">
                               <select
                                 value={ing.foodId}
                                 onChange={(e) => setIngredient(meal.id, dish.id, ing.id, { foodId: e.target.value })}
                                 className="flex-1 rounded border border-slate-300 bg-white px-2 py-1 focus:border-emerald-500 focus:outline-none"
                               >
-                                {FOOD_CATEGORIES.map((cat) => (
-                                  <optgroup key={cat} label={cat}>
-                                    {FOODS.filter((f) => f.category === cat).map((f) => (
-                                      <option key={f.id} value={f.id}>{f.name}</option>
-                                    ))}
-                                  </optgroup>
-                                ))}
+                                {FOOD_CATEGORIES.map((cat) => {
+                                  const items = visible.filter((f) => f.category === cat);
+                                  if (items.length === 0) return null;
+                                  return (
+                                    <optgroup key={cat} label={cat}>
+                                      {items.map((f) => (
+                                        <option key={f.id} value={f.id}>{f.name}</option>
+                                      ))}
+                                    </optgroup>
+                                  );
+                                })}
                               </select>
+                              {selectedFood && <FamiliarityBadge level={selectedFood.familiarity} />}
                               <input
                                 type="number"
                                 min={0}
@@ -449,7 +510,8 @@ export function MealPlanner({ target, muscleTargets }: { target?: MacroGoal; mus
                                 ✕
                               </button>
                             </div>
-                          ))}
+                            );
+                          })}
                           <button
                             type="button"
                             onClick={() => addIngredient(meal.id, dish.id)}

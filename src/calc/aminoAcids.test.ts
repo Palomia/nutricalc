@@ -16,17 +16,17 @@ import type { Day } from "./intake";
 
 // Aliments synthétiques rattachés à des profils d'AAE réels.
 const chicken: Food = {
-  id: "poulet", name: "Poulet", category: "Viandes, poissons, œufs",
+  id: "poulet", name: "Poulet", category: "Viandes, poissons, œufs", familiarity: "classique",
   kcalPer100g: 137, proteinPer100g: 30, lipidPer100g: 2, carbPer100g: 0,
   aaProfile: "meat", proteinQuality: "excellent",
 };
 const rice: Food = {
-  id: "riz", name: "Riz", category: "Féculents & pains",
+  id: "riz", name: "Riz", category: "Féculents & pains", familiarity: "classique",
   kcalPer100g: 143, proteinPer100g: 2.9, lipidPer100g: 0.4, carbPer100g: 32,
   aaProfile: "cereal", proteinQuality: "faible",
 };
 const apple: Food = {
-  id: "pomme", name: "Pomme", category: "Fruits & légumes",
+  id: "pomme", name: "Pomme", category: "Fruits & légumes", familiarity: "classique",
   kcalPer100g: 52, proteinPer100g: 0.3, lipidPer100g: 0.3, carbPer100g: 11.6,
 };
 

@@ -10,11 +10,11 @@ import type { Food } from "./food";
 
 // Aliments synthétiques aux valeurs rondes pour des assertions exactes.
 const rice: Food = {
-  id: "riz-test", name: "Riz test", category: "Féculents & pains",
+  id: "riz-test", name: "Riz test", category: "Féculents & pains", familiarity: "classique",
   kcalPer100g: 100, proteinPer100g: 2, lipidPer100g: 1, carbPer100g: 20,
 };
 const chicken: Food = {
-  id: "poulet-test", name: "Poulet test", category: "Viandes, poissons, œufs",
+  id: "poulet-test", name: "Poulet test", category: "Viandes, poissons, œufs", familiarity: "classique",
   kcalPer100g: 120, proteinPer100g: 30, lipidPer100g: 2, carbPer100g: 0,
 };
 
