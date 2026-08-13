@@ -1,6 +1,14 @@
 // Macronutriments et leurs découpages (références ANSES adulte).
 //
-// Découpages :
+// Les cibles de macros dépendent désormais du profil nutritionnel (ratios g/kg
+// et objectif calorique, cf. profile.ts) et sont calculées sur un poids de
+// référence (poids réel ou ajusté selon l'IMC, cf. effectiveWeightKg). Suivant
+// l'algorithme du profil :
+//   protéines = poids × ratio_protéines
+//   lipides   = poids × ratio_lipides
+//   glucides  = (calories cibles − protéines×4 − lipides×9) / 4   (le reste)
+//
+// Découpages (indépendants du profil) :
 //  - Acides aminés indispensables : besoins moyens FAO/OMS/UNU 2007 (mg/kg/j,
 //    adulte, identiques hommes/femmes ; ce sont des besoins moyens, pas des RNP).
 //  - Acides gras : références AFSSA/ANSES (avis 2006-SA-0359), en % de l'AET ou
@@ -10,22 +18,26 @@
 //
 // AS = apport satisfaisant ; "limite" = valeur maximale de santé publique ;
 // "OMS" = objectif de santé publique OMS (aucun n'est une limite toxicologique).
-import type { Profile } from "./profile";
+import { NUTRITION_PROFILES, type Profile } from "./profile";
 
-export const PROTEIN_G_PER_KG = 0.83;
-export const LIPID_FRACTION_AET = 0.375; // milieu de la fourchette ANSES 35-40 %
 export const KCAL_PER_G = { protein: 4, lipid: 9, carb: 4 } as const;
 
+// Cible d'un macronutriment : valeur cible plus fourchette (grammes) issue de la
+// fourchette de ratios du profil. Pour les glucides « reste des calories », la
+// fourchette peut être absente (gramsMin/gramsMax null).
 export interface MacroTarget {
   grams: number;
   kcal: number;
-  percentAet: number; // part de l'AET, entre 0 et 1
+  percentAet: number; // part de l'AET (calories cibles), entre 0 et 1
+  gramsMin: number | null;
+  gramsMax: number | null;
+  gPerKg: number | null; // ratio cible g/kg utilisé (null si dérivé du reste)
 }
 
 export interface AminoAcid {
   name: string;
   mgPerKg: number; // besoin moyen FAO/OMS (mg/kg/j)
-  mg: number; // besoin journalier = mgPerKg × poids
+  mg: number; // besoin journalier = mgPerKg × poids de référence
 }
 
 export type FattyAcidKind = "AS" | "limite";
@@ -110,11 +122,11 @@ const CARB_COMPONENTS: CarbRow[] = [
   { name: "Sucres libres / ajoutés", kind: "OMS", gramsFixed: null, percentAet: 10, note: "< 5 % AET idéalement (OMS)" },
 ];
 
-export function aminoAcidTargets(p: Profile): AminoAcid[] {
+export function aminoAcidTargets(weightKg: number): AminoAcid[] {
   return AMINO_ACIDS_MG_PER_KG.map(([name, mgPerKg]) => ({
     name,
     mgPerKg,
-    mg: mgPerKg * p.weightKg,
+    mg: mgPerKg * weightKg,
   }));
 }
 
@@ -149,25 +161,59 @@ export function carbComponents(energyKcal: number): CarbComponent[] {
   }));
 }
 
-export function macroTargets(p: Profile, energyKcal: number): MacroTargets {
+// Calcule les cibles de macros pour un profil donné, une énergie cible et un
+// poids de référence (réel ou ajusté). `energyKcal` correspond aux calories
+// cibles (TDEE + ajustement de l'objectif), `weightKg` au poids de référence.
+export function macroTargets(
+  p: Profile,
+  energyKcal: number,
+  weightKg: number,
+): MacroTargets {
   if (energyKcal <= 0)
     throw new Error("L'apport énergétique doit être strictement positif.");
+  if (weightKg <= 0)
+    throw new Error("Le poids de référence doit être strictement positif.");
 
-  const proteinG = PROTEIN_G_PER_KG * p.weightKg;
+  const np = NUTRITION_PROFILES[p.goal];
+
+  // Protéines et lipides : ratio g/kg × poids de référence.
+  const proteinG = np.proteinGPerKg.target * weightKg;
   const proteinKcal = proteinG * KCAL_PER_G.protein;
+  const lipidG = np.fatGPerKg.target * weightKg;
+  const lipidKcal = lipidG * KCAL_PER_G.lipid;
 
-  const lipidKcal = LIPID_FRACTION_AET * energyKcal;
-  const lipidG = lipidKcal / KCAL_PER_G.lipid;
-
-  // Les glucides absorbent le reste de l'énergie ; borné à 0 aux cas extrêmes.
+  // Glucides : le reste des calories cibles ; borné à 0 aux cas extrêmes (déficit
+  // très marqué où protéines + lipides couvrent déjà toute l'énergie).
   const carbKcal = Math.max(energyKcal - proteinKcal - lipidKcal, 0);
   const carbG = carbKcal / KCAL_PER_G.carb;
 
   return {
-    protein: { grams: proteinG, kcal: proteinKcal, percentAet: proteinKcal / energyKcal },
-    lipid: { grams: lipidG, kcal: lipidKcal, percentAet: lipidKcal / energyKcal },
-    carb: { grams: carbG, kcal: carbKcal, percentAet: carbKcal / energyKcal },
-    aminoAcids: aminoAcidTargets(p),
+    protein: {
+      grams: proteinG,
+      kcal: proteinKcal,
+      percentAet: proteinKcal / energyKcal,
+      gramsMin: np.proteinGPerKg.min * weightKg,
+      gramsMax: np.proteinGPerKg.max * weightKg,
+      gPerKg: np.proteinGPerKg.target,
+    },
+    lipid: {
+      grams: lipidG,
+      kcal: lipidKcal,
+      percentAet: lipidKcal / energyKcal,
+      gramsMin: np.fatGPerKg.min * weightKg,
+      gramsMax: np.fatGPerKg.max * weightKg,
+      gPerKg: np.fatGPerKg.target,
+    },
+    carb: {
+      grams: carbG,
+      kcal: carbKcal,
+      percentAet: carbKcal / energyKcal,
+      // Fourchette indicative si le profil en fournit une, sinon « reste ».
+      gramsMin: np.carbGPerKg ? np.carbGPerKg.min * weightKg : null,
+      gramsMax: np.carbGPerKg ? np.carbGPerKg.max * weightKg : null,
+      gPerKg: np.carbGPerKg ? np.carbGPerKg.target : null,
+    },
+    aminoAcids: aminoAcidTargets(weightKg),
     fattyAcids: fattyAcidTargets(energyKcal),
     carbComponents: carbComponents(energyKcal),
   };
