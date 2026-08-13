@@ -17,6 +17,9 @@ dist
 dist-ssr
 *.local
 
+# Base d'aliments : dump brut USDA mis en cache (seul foods.sr_legacy.json est versionné)
+data/.cache/
+
 # Editor / OS
 .vscode/*
 !.vscode/extensions.json
