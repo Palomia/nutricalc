@@ -1,4 +1,5 @@
 // Assemblage du rapport journalier complet.
+import type { MuscleTargets } from "./aminoAcids";
 import { bmrMifflinStJeor, energyTarget, tdee, type EnergyTarget } from "./energy";
 import { macroTargets, type MacroTargets } from "./macros";
 import { micronutrientReferences, type MicroReference } from "./micros";
@@ -15,6 +16,7 @@ export interface DailyReport {
   energyKcal: number; // calories cibles (raccourci vers energy.energyKcal)
   macros: MacroTargets;
   micros: MicroReference[];
+  muscleTargets: MuscleTargets; // objectifs pour l'analyse anabolique (cf. aminoAcids.ts)
 }
 
 export function dailyReport(p: Profile): DailyReport {
@@ -22,6 +24,7 @@ export function dailyReport(p: Profile): DailyReport {
   const tdeeKcal = tdee(p);
   const energy = energyTarget(p, tdeeKcal);
   const refWeight = effectiveWeightKg(p);
+  const macros = macroTargets(p, energy.energyKcal, refWeight);
   return {
     profile: p,
     bmrKcal: bmrMifflinStJeor(p),
@@ -31,7 +34,12 @@ export function dailyReport(p: Profile): DailyReport {
     weightAdjusted: refWeight < p.weightKg,
     energy,
     energyKcal: energy.energyKcal,
-    macros: macroTargets(p, energy.energyKcal, refWeight),
+    macros,
     micros: micronutrientReferences(p),
+    muscleTargets: {
+      aminoAcids: macros.aminoAcids,
+      proteinTargetG: macros.protein.grams,
+      energyTargetKcal: energy.energyKcal,
+    },
   };
 }

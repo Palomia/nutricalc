@@ -35,6 +35,12 @@ export interface NutritionProfile {
   proteinGPerKg: Range;
   fatGPerKg: Range;
   carbGPerKg: Range | null; // fourchette indicative ; null = « reste des calories »
+  // Facteur sportif appliqué aux besoins minimaux en acides aminés (cf. temp.txt
+  // §7). EXTRAPOLATION PRODUIT : la littérature sportive raisonne en protéines
+  // totales, pas en AAE individuels ; ce facteur remonte les minimums OMS (santé)
+  // vers un objectif orienté performance. Ce n'est pas une recommandation
+  // officielle.
+  aaeFactor: number;
 }
 
 // Sept profils, du sédentaire à la sèche avancée. Ratios g/kg et ajustements
@@ -48,6 +54,7 @@ export const NUTRITION_PROFILES = {
     proteinGPerKg: { min: 0.8, target: 1.0, max: 1.2 },
     fatGPerKg: { min: 0.8, target: 0.9, max: 1.0 },
     carbGPerKg: { min: 2, target: 3, max: 4 },
+    aaeFactor: 1.0,
   },
   active: {
     label: "Actif",
@@ -57,6 +64,7 @@ export const NUTRITION_PROFILES = {
     proteinGPerKg: { min: 1.2, target: 1.4, max: 1.6 },
     fatGPerKg: { min: 0.8, target: 0.8, max: 1.0 },
     carbGPerKg: { min: 3, target: 4, max: 5 },
+    aaeFactor: 1.2,
   },
   endurance: {
     label: "Endurance",
@@ -66,6 +74,7 @@ export const NUTRITION_PROFILES = {
     proteinGPerKg: { min: 1.4, target: 1.6, max: 1.8 },
     fatGPerKg: { min: 0.8, target: 0.9, max: 1.0 },
     carbGPerKg: { min: 5, target: 6, max: 8 },
+    aaeFactor: 1.3,
   },
   strengthMaintenance: {
     label: "Force (maintien)",
@@ -75,6 +84,7 @@ export const NUTRITION_PROFILES = {
     proteinGPerKg: { min: 1.6, target: 1.8, max: 2.0 },
     fatGPerKg: { min: 0.7, target: 0.8, max: 1.0 },
     carbGPerKg: { min: 3, target: 4, max: 6 },
+    aaeFactor: 1.5,
   },
   muscleGain: {
     label: "Prise de masse",
@@ -84,6 +94,7 @@ export const NUTRITION_PROFILES = {
     proteinGPerKg: { min: 1.6, target: 1.8, max: 2.2 },
     fatGPerKg: { min: 0.8, target: 0.9, max: 1.0 },
     carbGPerKg: { min: 4, target: 5, max: 7 },
+    aaeFactor: 1.8,
   },
   fatLoss: {
     label: "Perte de poids",
@@ -93,6 +104,7 @@ export const NUTRITION_PROFILES = {
     proteinGPerKg: { min: 2.0, target: 2.2, max: 2.4 },
     fatGPerKg: { min: 0.6, target: 0.7, max: 0.8 },
     carbGPerKg: null, // reste des calories
+    aaeFactor: 1.8,
   },
   aggressiveCut: {
     label: "Sèche avancée",
@@ -102,6 +114,7 @@ export const NUTRITION_PROFILES = {
     proteinGPerKg: { min: 2.3, target: 2.7, max: 3.1 },
     fatGPerKg: { min: 0.6, target: 0.7, max: 0.8 },
     carbGPerKg: null, // reste des calories
+    aaeFactor: 2.0,
   },
 } as const satisfies Record<string, NutritionProfile>;
 
@@ -133,10 +146,13 @@ export function bmi(p: Pick<Profile, "weightKg" | "heightCm">): number {
   return p.weightKg / (heightM * heightM);
 }
 
-// Poids idéal (formule de Devine), en kg. Sert de base au poids ajusté.
-export function idealBodyWeightKg(sex: Sex, heightCm: number): number {
-  const inchesOver5ft = Math.max(0, heightCm / 2.54 - 60);
-  return (sex === "male" ? 50 : 45.5) + 2.3 * inchesOver5ft;
+// Poids idéal, en kg : le poids correspondant à un IMC de 25 pour la taille
+// donnée (cf. temp.txt §3, « poids_ideal = IMC 25 »). Sert de base au poids
+// ajusté. Ne dépend pas du sexe (l'IMC de référence est commun).
+export const IDEAL_BMI = 25;
+export function idealBodyWeightKg(heightCm: number): number {
+  const heightM = heightCm / 100;
+  return IDEAL_BMI * heightM * heightM;
 }
 
 // Poids de référence pour les calculs en g/kg. En surpoids ou obésité, doser les
@@ -148,7 +164,7 @@ export function idealBodyWeightKg(sex: Sex, heightCm: number): number {
 export function effectiveWeightKg(p: Profile): number {
   const currentBmi = bmi(p);
   if (currentBmi < 25) return p.weightKg;
-  const ideal = idealBodyWeightKg(p.sex, p.heightCm);
+  const ideal = idealBodyWeightKg(p.heightCm);
   const excess = Math.max(0, p.weightKg - ideal);
   const factor = currentBmi < 30 ? 0.25 : 0.4;
   return ideal + factor * excess;

@@ -16,6 +16,13 @@ import {
   type Day,
   type MacroIntake,
 } from "./calc/intake";
+import {
+  analyzeMuscleProfile,
+  type LeucineLevel,
+  type MuscleAnalysis,
+  type MuscleBand,
+  type MuscleTargets,
+} from "./calc/aminoAcids";
 
 // Cible de comparaison, en valeurs absolues journalières.
 export interface MacroGoal {
@@ -32,6 +39,7 @@ interface EDish { id: number; name: string; ingredients: EIngredient[] }
 interface EMeal { id: number; name: string; dishes: EDish[] }
 
 const round = (n: number) => Math.round(n);
+const one = (n: number) => Math.round(n * 10) / 10;
 
 // Conversion état d'édition → journée agrégeable par intake.ts.
 function toDay(meals: EMeal[]): Day {
@@ -77,13 +85,190 @@ function CoverageRow(props: { label: string; bar: string; consumed: number; targ
   );
 }
 
-export function MealPlanner({ target }: { target?: MacroGoal }) {
+// --- Analyse anabolique (temp.txt §4, §8-13) ---
+
+const BAND_LABEL: Record<MuscleBand, string> = {
+  excellent: "Optimisation quasi complète",
+  tresBon: "Très bon profil musculaire",
+  correct: "Correct mais améliorable",
+  limitant: "Plusieurs facteurs limitants",
+};
+
+const BAND_STYLE: Record<MuscleBand, { text: string; bar: string; ring: string }> = {
+  excellent: { text: "text-emerald-700", bar: "bg-emerald-500", ring: "border-emerald-200 bg-emerald-50" },
+  tresBon: { text: "text-sky-700", bar: "bg-sky-500", ring: "border-sky-200 bg-sky-50" },
+  correct: { text: "text-amber-700", bar: "bg-amber-500", ring: "border-amber-200 bg-amber-50" },
+  limitant: { text: "text-red-700", bar: "bg-red-500", ring: "border-red-200 bg-red-50" },
+};
+
+const LEUCINE_STYLE: Record<LeucineLevel, { label: string; cls: string }> = {
+  faible: { label: "pauvre en leucine", cls: "text-red-600" },
+  min: { label: "minimum atteint", cls: "text-amber-600" },
+  optimal: { label: "optimal", cls: "text-sky-600" },
+  excellent: { label: "excellent", cls: "text-emerald-600" },
+};
+
+// Ligne sous-score du score musculaire (part pondérée, 0-1).
+function SubScore({ label, value, weight }: { label: string; value: number; weight: number }) {
+  return (
+    <div className="flex items-center gap-2 text-xs">
+      <span className="w-28 shrink-0 text-slate-500">{label}</span>
+      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+        <div className="h-full rounded-full bg-slate-400" style={{ width: `${value * 100}%` }} />
+      </div>
+      <span className="w-24 shrink-0 text-right tabular-nums text-slate-400">
+        {round(value * 100)} % · {round(weight * 100)} %
+      </span>
+    </div>
+  );
+}
+
+function MuscleAnalysisPanel({ analysis }: { analysis: MuscleAnalysis }) {
+  const { score, limiting, distribution, quality, aminoAcids } = analysis;
+  const style = BAND_STYLE[score.band];
+  return (
+    <div className="mt-6 space-y-4">
+      {/* Score de construction musculaire (§12) */}
+      <div className={"rounded-xl border p-4 " + style.ring}>
+        <div className="flex items-end justify-between">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              Score de construction musculaire
+            </p>
+            <p className={"mt-1 text-sm font-semibold " + style.text}>{BAND_LABEL[score.band]}</p>
+          </div>
+          <p className={"text-3xl font-bold tabular-nums " + style.text}>
+            {round(score.total)}
+            <span className="text-base font-normal text-slate-400"> / 100</span>
+          </p>
+        </div>
+        <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/70">
+          <div className={"h-full rounded-full " + style.bar} style={{ width: `${score.total}%` }} />
+        </div>
+        <div className="mt-3 space-y-1">
+          <SubScore label="Protéines" value={score.proteinScore} weight={0.3} />
+          <SubScore label="Couverture AAE" value={score.aaeScore} weight={0.25} />
+          <SubScore label="Leucine" value={score.leucineScore} weight={0.2} />
+          <SubScore label="Calories" value={score.calorieScore} weight={0.15} />
+          <SubScore label="Répartition" value={score.distributionScore} weight={0.1} />
+        </div>
+        <p className="mt-2 text-right text-[10px] text-slate-400">score · poids dans la note</p>
+      </div>
+
+      {/* Acide aminé limitant (§8) */}
+      {limiting ? (
+        <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+            Acide aminé limitant
+          </p>
+          <p className="mt-1 text-sm">
+            <span className="font-semibold text-slate-800">{limiting.name}</span>
+            {" — couverture "}
+            <span className={limiting.coverage < 1 ? "font-semibold text-amber-600" : "font-semibold text-emerald-600"}>
+              {round(limiting.coverage * 100)} %
+            </span>
+          </p>
+          <p className="mt-1 text-xs text-slate-500">
+            Le potentiel anabolique de la journée est plafonné par cet acide aminé
+            (le moins couvert). Diversifiez les sources protéiques pour le relever.
+          </p>
+          <details className="group mt-2">
+            <summary className="cursor-pointer text-xs text-slate-600 hover:underline">
+              Couverture des 9 acides aminés indispensables
+            </summary>
+            <div className="mt-2 space-y-1">
+              {[...aminoAcids].sort((a, b) => a.coverage - b.coverage).map((c) => (
+                <div key={c.key} className="flex items-center gap-2 text-xs">
+                  <span className="w-52 shrink-0 truncate text-slate-600" title={c.name}>{c.name}</span>
+                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+                    <div
+                      className={"h-full rounded-full " + (c.coverage < 1 ? "bg-amber-400" : "bg-emerald-400")}
+                      style={{ width: `${Math.min(c.coverage * 100, 100)}%` }}
+                    />
+                  </div>
+                  <span className="w-12 shrink-0 text-right tabular-nums text-slate-500">{round(c.coverage * 100)} %</span>
+                </div>
+              ))}
+            </div>
+            <p className="mt-1 text-[10px] text-slate-400">
+              Objectifs = minimums OMS × facteur sportif du profil (temp.txt §6-7).
+            </p>
+          </details>
+        </div>
+      ) : (
+        <div className="rounded-xl border border-slate-200 bg-white p-4 text-xs text-slate-500">
+          Ajoutez des aliments riches en protéines pour analyser la couverture des
+          acides aminés et l'acide aminé limitant.
+        </div>
+      )}
+
+      {/* Qualité protéique (§11) */}
+      <div className="rounded-xl border border-slate-200 bg-white p-4">
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+            Qualité protéique
+          </span>
+          <span className="font-semibold tabular-nums text-slate-800">
+            {round(quality.score)} / 100
+          </span>
+        </div>
+        <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
+          <div className="h-full rounded-full bg-indigo-500" style={{ width: `${quality.score}%` }} />
+        </div>
+        <p className="mt-1 text-xs text-slate-400">
+          Moyenne des sources protéiques pondérée par les grammes (œufs/laitages/
+          poisson/viande &gt; soja &gt; légumineuses &gt; céréales).
+        </p>
+      </div>
+
+      {/* Leucine et distribution par repas (§9-10) */}
+      <div className="rounded-xl border border-slate-200 bg-white p-4">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+            Leucine et répartition par repas
+          </span>
+          <span className={"text-xs font-medium " + (distribution.bonus ? "text-emerald-600" : "text-slate-400")}>
+            {distribution.peaks} pic{distribution.peaks > 1 ? "s" : ""} anabolique{distribution.peaks > 1 ? "s" : ""}
+            {distribution.bonus ? " · bonus 3-5 ✓" : ""}
+          </span>
+        </div>
+        <div className="space-y-1">
+          {distribution.meals.map((m, i) => {
+            const leu = LEUCINE_STYLE[m.leucineLevel];
+            return (
+              <div key={i} className="flex items-center justify-between border-b border-slate-100 py-1 text-sm">
+                <span className="truncate text-slate-600">
+                  {m.name}
+                  {m.isAnabolicPeak && <span className="ml-1 text-emerald-500" title="Pic anabolique (≥ 25 g)">●</span>}
+                </span>
+                <span className="tabular-nums text-slate-500">
+                  {one(m.qualityProteinG)} g qualité · leucine {one(m.leucineG)} g
+                  <span className={"ml-2 " + leu.cls}>{leu.label}</span>
+                </span>
+              </div>
+            );
+          })}
+        </div>
+        <p className="mt-2 text-xs text-slate-400">
+          Cible : 25-40 g de protéines de qualité par prise et ≥ 2 g de leucine
+          (optimal 2,5 g). 3 à 5 pics anaboliques dans la journée = bonus.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+export function MealPlanner({ target, muscleTargets }: { target?: MacroGoal; muscleTargets?: MuscleTargets }) {
   const [meals, setMeals] = useState<EMeal[]>([]);
   const nextId = useRef(1);
   const id = () => nextId.current++;
 
   const day = useMemo(() => toDay(meals), [meals]);
   const total = useMemo(() => dayMacros(day), [day]);
+  const analysis = useMemo(
+    () => (muscleTargets ? analyzeMuscleProfile(day, muscleTargets) : null),
+    [day, muscleTargets],
+  );
 
   const addMeal = () =>
     setMeals((ms) => [...ms, { id: id(), name: `Repas ${ms.length + 1}`, dishes: [] }]);
@@ -309,9 +494,13 @@ export function MealPlanner({ target }: { target?: MacroGoal }) {
         )}
       </div>
 
+      {analysis && meals.length > 0 && <MuscleAnalysisPanel analysis={analysis} />}
+
       <p className="mt-4 text-xs text-slate-400">
-        Valeurs nutritionnelles indicatives (table CIQUAL/ANSES, pour 100 g),
-        à revalider. Outil informatif — ne remplace pas un avis diététique.
+        Valeurs nutritionnelles indicatives (table CIQUAL/ANSES, pour 100 g ;
+        acides aminés estimés par profil de source, temp.txt §5-7), à revalider.
+        Analyse anabolique et scores : extrapolations produit, pas des
+        recommandations officielles. Outil informatif — ne remplace pas un avis diététique.
       </p>
     </section>
   );

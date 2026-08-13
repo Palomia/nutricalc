@@ -665,6 +665,7 @@ export function App() {
                   carbG: result.report.macros.carb.grams,
                   kcal: result.report.energyKcal,
                 }}
+                muscleTargets={result.report.muscleTargets}
               />
             </>
           )

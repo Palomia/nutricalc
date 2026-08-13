@@ -1,0 +1,424 @@
+SPECIFICATION NUTRITION V1/V2
+=======================================
+
+OBJECTIF
+---------
+Construire un moteur nutritionnel orienté santé + performance sportive + musculation + végétarisme/végétalisme.
+
+Le moteur doit être pragmatique.
+Il ne cherche pas à reproduire parfaitement la littérature scientifique.
+Il cherche à produire des recommandations robustes et utiles pour la majorité des utilisateurs.
+
+Certaines règles ci-dessous sont directement issues des recommandations sportives.
+D'autres sont des extrapolations d'ingénierie nutritionnelle destinées à rendre l'outil plus intelligent.
+Les extrapolations sont explicitement indiquées.
+
+---------------------------------------
+1. CALCUL DES MACRONUTRIMENTS
+---------------------------------------
+
+Ordre de calcul :
+
+1. calories
+2. protéines
+3. lipides
+4. glucides
+
+Glucides = variable d'ajustement.
+
+---------------------------------------
+2. PROFILS NUTRITIONNELS
+---------------------------------------
+
+SEDENTAIRE
+
+- calories = maintien
+- protéines = 0.8 à 1.0 g/kg
+- lipides = 0.8 à 1.0 g/kg
+- glucides = calories restantes
+
+SPORTIF LOISIR
+
+- 2 à 4 séances/semaine
+- protéines = 1.2 à 1.6 g/kg
+- lipides = 0.8 g/kg
+- glucides = 3 à 5 g/kg
+
+ENDURANCE
+
+- course
+- vélo
+- triathlon
+- sports collectifs
+
+- protéines = 1.4 à 1.8 g/kg
+- lipides = 0.8 à 1.0 g/kg
+- glucides = 5 à 8 g/kg
+
+MUSCULATION MAINTIEN
+
+- protéines = 1.6 à 2.0 g/kg
+- lipides = 0.8 g/kg
+- glucides = calories restantes
+
+PRISE DE MASSE
+
+- calories = TDEE + 300 kcal
+- protéines = 1.6 à 2.2 g/kg
+- lipides = 0.8 à 1.0 g/kg
+- glucides = calories restantes
+
+SECHE
+
+- calories = TDEE - 500 kcal
+- protéines = 2.0 à 2.4 g/kg
+- lipides = 0.6 à 0.8 g/kg
+- glucides = calories restantes
+
+SECHE AGRESSIVE
+
+- calories = TDEE - 750 kcal
+- protéines = 2.3 à 3.1 g/kg
+- lipides = 0.6 à 0.8 g/kg
+- glucides = calories restantes
+
+---------------------------------------
+3. POIDS UTILISE POUR LES CALCULS
+---------------------------------------
+
+EXTRAPOLATION MOTEUR
+
+Pour les profils en fort surpoids :
+
+IMC < 25
+-> poids réel
+
+25 <= IMC < 30
+-> poids ajusté
+
+IMC >= 30
+-> poids ajusté renforcé
+
+Formule :
+
+poids_ideal = IMC 25
+
+excès = poids réel - poids idéal
+
+surpoids léger :
+poids_utilisé = poids_ideal + 0.25 * excès
+
+obésité :
+poids_utilisé = poids_ideal + 0.40 * excès
+
+Objectif :
+éviter des recommandations protéiques absurdes.
+
+---------------------------------------
+4. APPROCHE ACIDES AMINES
+---------------------------------------
+
+Ne PAS se limiter aux protéines totales.
+
+Pour un régime végétarien ou végétalien,
+la qualité protéique devient critique.
+
+L'outil doit analyser :
+
+- protéines totales
+- tous les acides aminés essentiels
+- leucine
+- répartition des protéines
+
+---------------------------------------
+5. AAE (ACIDES AMINES ESSENTIELS)
+---------------------------------------
+
+L'outil stocke les apports journaliers :
+
+- histidine
+- isoleucine
+- leucine
+- lysine
+- méthionine
+- cystéine
+- phénylalanine
+- tyrosine
+- thréonine
+- tryptophane
+- valine
+
+Certaines sources combinent :
+
+- méthionine + cystéine
+- phénylalanine + tyrosine
+
+Conserver les deux modes.
+
+---------------------------------------
+6. BESOIN MINIMUM AAE
+---------------------------------------
+
+Basé sur les recommandations OMS.
+
+Valeurs mg/kg/j :
+
+histidine = 10
+isoleucine = 20
+leucine = 39
+lysine = 30
+methionine+cysteine = 15
+phenylalanine+tyrosine = 25
+threonine = 15
+tryptophane = 4
+valine = 26
+
+Ces valeurs représentent :
+
+"minimum physiologique compatible avec la santé"
+
+PAS
+"optimum hypertrophie musculaire"
+
+---------------------------------------
+7. FACTEUR SPORTIF AAE
+---------------------------------------
+
+EXTRAPOLATION
+
+La littérature sportive formule généralement les besoins en protéines totales et NON en AAE individuels.
+
+Pour rendre l'outil plus intelligent, appliquer un facteur sportif aux besoins minimums.
+
+sedentaire = x1.0
+
+actif = x1.2
+
+endurance = x1.3
+
+musculation maintien = x1.5
+
+prise de masse = x1.8
+
+sèche = x1.8
+
+sèche agressive = x2.0
+
+Exemple :
+
+lysine OMS :
+
+30 mg/kg
+
+prise de masse :
+
+30 × 1.8 = 54 mg/kg
+
+ATTENTION :
+ce facteur est une extrapolation de produit.
+Il ne représente pas une recommandation officielle.
+
+---------------------------------------
+8. ACIDE AMINE LIMITANT
+---------------------------------------
+
+Concept extrêmement important.
+
+Pour chaque utilisateur :
+
+couverture_AAE =
+
+apport_AAE /
+objectif_AAE
+
+L'acide aminé ayant la plus faible couverture est :
+
+LIMITING_AMINO_ACID
+
+Exemple :
+
+lysine = 72%
+
+leucine = 140%
+
+valine = 180%
+
+=> AA limitant = lysine
+
+Le score de construction musculaire est plafonné par l'AA limitant.
+
+Inspiré des modèles utilisés en nutrition animale.
+
+EXTRAPOLATION.
+
+---------------------------------------
+9. LEUCINE
+---------------------------------------
+
+Indicateur prioritaire.
+
+La leucine agit comme déclencheur principal de la synthèse protéique musculaire.
+
+Suivi recommandé :
+
+par repas
+
+Objectif :
+
+minimum :
+2 g
+
+optimal :
+2.5 g
+
+excellent :
+3 g
+
+Repas en dessous de 2 g :
+
+signalement :
+"repas pauvre en leucine"
+
+---------------------------------------
+10. DISTRIBUTION DES PROTEINES
+---------------------------------------
+
+Ne pas seulement analyser la journée.
+
+Analyser :
+
+petit déjeuner
+déjeuner
+collation
+dîner
+
+Objectif :
+
+25 à 40 g protéines de qualité par prise.
+
+Bonus si :
+
+3 à 5 pics anaboliques dans la journée.
+
+EXTRAPOLATION pratique basée sur la littérature de synthèse protéique.
+
+---------------------------------------
+11. SCORE QUALITÉ PROTÉIQUE
+---------------------------------------
+
+EXTRAPOLATION PRODUIT
+
+excellent :
+
+- œufs
+- laitages
+- whey
+- poisson
+- viande
+
+très bon :
+
+- soja
+- tofu
+- tempeh
+- protéines de pois + riz
+
+moyen :
+
+- légumineuses seules
+
+faible :
+
+- céréales seules
+
+L'algorithme calcule :
+
+protein_quality_score
+
+0-100
+
+---------------------------------------
+12. SCORE MUSCLE BUILDING
+---------------------------------------
+
+EXTRAPOLATION
+
+Objectif :
+fournir un indicateur simple.
+
+Proposition :
+
+30% protéines totales
+
+25% couverture AAE
+
+20% leucine
+
+15% calories
+
+10% répartition
+
+Score final :
+
+0-100
+
+Exemple :
+
+90-100
+= optimisation quasi complète
+
+75-90
+= très bon
+
+50-75
+= correct mais améliorable
+
+<50
+= plusieurs facteurs limitants
+
+---------------------------------------
+13. ORDRE D'EVALUATION FINAL
+---------------------------------------
+
+1. calories
+2. protéines totales
+3. couverture AAE
+4. acide aminé limitant
+5. leucine par repas
+6. qualité protéique
+7. répartition des protéines
+8. score final
+
+---------------------------------------
+14. PHILOSOPHIE PRODUIT
+---------------------------------------
+
+Le moteur ne doit pas considérer que :
+"160 g de protéines = optimal"
+
+Deux utilisateurs à 160 g de protéines peuvent avoir :
+
+- un excellent profil musculaire
+- un mauvais profil musculaire
+
+selon :
+
+- couverture des AAE
+- leucine
+- qualité des protéines
+- distribution dans la journée
+
+L'analyse des acides aminés est particulièrement importante pour :
+
+- végétariens
+- végétaliens
+- régimes très céréaliers
+- personnes limitant fortement les produits animaux
+
+Dans ces cas, l'outil doit privilégier une logique :
+
+"protéine utile pour l'anabolisme"
+
+plutôt qu'une logique simple :
+
+"grammes de protéines".
