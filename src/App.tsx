@@ -2,22 +2,12 @@ import { useMemo, useState, type ReactNode } from "react";
 import { dailyReport } from "./calc/report";
 import { MealPlanner } from "./MealPlanner";
 import {
-  ACTIVITY_LEVELS,
   NUTRITION_PROFILES,
-  type ActivityLevel,
   type NutritionGoal,
   type Profile,
   type Sex,
 } from "./calc/profile";
 import type { CarbComponent, FattyAcidTarget, MacroTarget } from "./calc/macros";
-
-const ACTIVITY_LABELS: Record<ActivityLevel, string> = {
-  sedentary: "Sédentaire",
-  light: "Légère (1-3 j/sem)",
-  moderate: "Modérée (3-5 j/sem)",
-  active: "Intense (6-7 j/sem)",
-  veryActive: "Très intense",
-};
 
 const GOAL_KEYS = Object.keys(NUTRITION_PROFILES) as NutritionGoal[];
 
@@ -447,8 +437,8 @@ export function App() {
     sex: "female",
     ageYears: 35,
     weightKg: 65,
+    targetWeightKg: 65,
     heightCm: 168,
-    activity: "moderate",
     goal: "active",
   });
 
@@ -499,21 +489,6 @@ export function App() {
             </label>
 
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-700">Niveau d'activité</span>
-              <select
-                className="rounded-lg border border-slate-300 px-3 py-2 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
-                value={profile.activity}
-                onChange={(e) => set("activity", e.target.value as ActivityLevel)}
-              >
-                {(Object.keys(ACTIVITY_LEVELS) as ActivityLevel[]).map((a) => (
-                  <option key={a} value={a}>
-                    {ACTIVITY_LABELS[a]}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="flex flex-col gap-1 text-sm sm:col-span-2">
               <span className="font-medium text-slate-700">Objectif</span>
               <select
                 className="rounded-lg border border-slate-300 px-3 py-2 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
@@ -530,8 +505,10 @@ export function App() {
 
             <NumberField label="Âge" value={profile.ageYears} min={18} max={120} unit="ans"
               onChange={(v) => set("ageYears", v)} />
-            <NumberField label="Poids" value={profile.weightKg} min={1} max={400} unit="kg"
+            <NumberField label="Poids actuel" value={profile.weightKg} min={1} max={400} unit="kg"
               onChange={(v) => set("weightKg", v)} />
+            <NumberField label="Poids cible" value={profile.targetWeightKg} min={1} max={400} unit="kg"
+              onChange={(v) => set("targetWeightKg", v)} />
             <NumberField label="Taille" value={profile.heightCm} min={1} max={260} unit="cm"
               onChange={(v) => set("heightCm", v)} />
           </div>
@@ -562,9 +539,10 @@ export function App() {
 
               {result.report.weightAdjusted && (
                 <p className="mt-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                  IMC {one(result.report.bmi)} — les macros en g/kg sont calculées sur un
-                  poids ajusté de {one(result.report.effectiveWeightKg)} kg (au lieu de{" "}
-                  {one(result.report.profile.weightKg)} kg) pour ne pas surdoser sur la masse grasse.
+                  Les macros en g/kg sont calculées sur un poids de référence de{" "}
+                  {one(result.report.effectiveWeightKg)} kg — la moyenne entre votre poids
+                  actuel ({one(result.report.profile.weightKg)} kg) et votre poids cible
+                  ({one(result.report.profile.targetWeightKg)} kg).
                 </p>
               )}
 
@@ -574,7 +552,7 @@ export function App() {
                   <MacroRow label="Protéines" bar="bg-sky-500" target={result.report.macros.protein}>
                     <details className="group mt-2">
                       <summary className="cursor-pointer text-xs text-sky-700 hover:underline">
-                        Acides aminés indispensables (9) — besoins FAO/OMS
+                        Acides aminés indispensables (9) — minimums OMS × facteur sportif
                       </summary>
                       <div className="mt-2 grid grid-cols-1 gap-x-8 gap-y-1 sm:grid-cols-2">
                         {result.report.macros.aminoAcids.map((aa) => (
@@ -665,6 +643,7 @@ export function App() {
                   carbG: result.report.macros.carb.grams,
                   kcal: result.report.energyKcal,
                 }}
+                muscleTargets={result.report.muscleTargets}
               />
             </>
           )

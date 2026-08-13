@@ -6,8 +6,8 @@ const profile = (weightKg = 80, sex: Profile["sex"] = "male"): Profile => ({
   sex,
   ageYears: 30,
   weightKg,
+  targetWeightKg: weightKg,
   heightCm: 180,
-  activity: "moderate",
   goal: "active",
 });
 
@@ -24,10 +24,12 @@ describe("acides aminés indispensables", () => {
     expect(breakdown().aminoAcids).toHaveLength(9);
   });
 
-  it("le besoin suit le poids de référence", () => {
+  it("le besoin suit le poids de référence et le facteur sportif (§7)", () => {
+    // Profil « active » → facteur sportif 1,2 appliqué au minimum OMS.
     const aa = byName(breakdown(80).aminoAcids);
-    expect(aa["Leucine"].mg).toBeCloseTo(3120, 6); // 39 mg/kg × 80 kg
-    expect(aa["Tryptophane"].mg).toBeCloseTo(4 * 80, 6);
+    expect(aa["Leucine"].mgPerKgBase).toBe(39); // minimum OMS brut
+    expect(aa["Leucine"].mg).toBeCloseTo(39 * 1.2 * 80, 6); // 39 mg/kg × 1,2 × 80 kg
+    expect(aa["Tryptophane"].mg).toBeCloseTo(4 * 1.2 * 80, 6);
   });
 
   it("identiques entre sexes", () => {

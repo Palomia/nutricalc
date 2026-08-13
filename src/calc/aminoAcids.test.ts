@@ -1,0 +1,152 @@
+import { describe, expect, it } from "vitest";
+import {
+  analyzeMuscleProfile,
+  dayAminoAcids,
+  ingredientAminoAcids,
+  leucineLevel,
+  limitingAminoAcid,
+  aminoAcidCoverage,
+  proteinDistribution,
+  proteinQualityScore,
+  type MuscleTargets,
+} from "./aminoAcids";
+import { AMINO_ACID_PROFILES, type Food } from "./food";
+import { aminoAcidTargets } from "./macros";
+import type { Day } from "./intake";
+
+// Aliments synthétiques rattachés à des profils d'AAE réels.
+const chicken: Food = {
+  id: "poulet", name: "Poulet", category: "Viandes, poissons, œufs",
+  kcalPer100g: 137, proteinPer100g: 30, lipidPer100g: 2, carbPer100g: 0,
+  aaProfile: "meat", proteinQuality: "excellent",
+};
+const rice: Food = {
+  id: "riz", name: "Riz", category: "Féculents & pains",
+  kcalPer100g: 143, proteinPer100g: 2.9, lipidPer100g: 0.4, carbPer100g: 32,
+  aaProfile: "cereal", proteinQuality: "faible",
+};
+const apple: Food = {
+  id: "pomme", name: "Pomme", category: "Fruits & légumes",
+  kcalPer100g: 52, proteinPer100g: 0.3, lipidPer100g: 0.3, carbPer100g: 11.6,
+};
+
+const dishOf = (food: Food, grams: number) => ({
+  name: food.name,
+  ingredients: [{ food, grams }],
+});
+
+describe("apport en acides aminés", () => {
+  it("dérive les mg d'AAE du profil × grammes de protéines", () => {
+    // 100 g de poulet → 30 g de protéines ; leucine = 80 mg/g × 30 g = 2400 mg.
+    const aa = ingredientAminoAcids({ food: chicken, grams: 100 });
+    expect(aa.leucine).toBeCloseTo(AMINO_ACID_PROFILES.meat.leucine * 30, 6);
+  });
+
+  it("un aliment sans profil (protéines négligeables) n'apporte pas d'AAE", () => {
+    const aa = ingredientAminoAcids({ food: apple, grams: 200 });
+    expect(aa.leucine).toBe(0);
+    expect(aa.lysine).toBe(0);
+  });
+
+  it("la journée somme les repas", () => {
+    const day: Day = {
+      meals: [
+        { name: "Déjeuner", dishes: [dishOf(chicken, 100)] },
+        { name: "Dîner", dishes: [dishOf(chicken, 50)] },
+      ],
+    };
+    expect(dayAminoAcids(day).leucine).toBeCloseTo(
+      AMINO_ACID_PROFILES.meat.leucine * (30 + 15),
+      6,
+    );
+  });
+});
+
+describe("acide aminé limitant (§8)", () => {
+  it("un régime tout céréales est limité par la lysine", () => {
+    const day: Day = { meals: [{ name: "Repas", dishes: [dishOf(rice, 1000)] }] };
+    const targets = aminoAcidTargets(70, 1.8); // prise de masse, 70 kg
+    const cov = aminoAcidCoverage(dayAminoAcids(day), targets);
+    const limiting = limitingAminoAcid(cov);
+    expect(limiting?.key).toBe("lysine");
+  });
+
+  it("sans protéine analysable, pas d'acide aminé limitant", () => {
+    const day: Day = { meals: [{ name: "Repas", dishes: [dishOf(apple, 300)] }] };
+    const cov = aminoAcidCoverage(dayAminoAcids(day), aminoAcidTargets(70, 1));
+    expect(limitingAminoAcid(cov)).toBeNull();
+  });
+});
+
+describe("leucine par repas (§9)", () => {
+  it("classe selon les seuils 2 / 2,5 / 3 g", () => {
+    expect(leucineLevel(1.5)).toBe("faible");
+    expect(leucineLevel(2.2)).toBe("min");
+    expect(leucineLevel(2.7)).toBe("optimal");
+    expect(leucineLevel(3.5)).toBe("excellent");
+  });
+});
+
+describe("distribution des protéines (§10)", () => {
+  it("compte les pics anaboliques et accorde le bonus à 3-5 prises", () => {
+    const meal = (n: string) => ({ name: n, dishes: [dishOf(chicken, 120)] }); // ~36 g prot
+    const day: Day = { meals: [meal("PDJ"), meal("Déj"), meal("Dîner")] };
+    const dist = proteinDistribution(day);
+    expect(dist.peaks).toBe(3);
+    expect(dist.bonus).toBe(true);
+    expect(dist.meals.every((m) => m.isAnabolicPeak)).toBe(true);
+  });
+
+  it("pas de bonus avec un seul gros repas", () => {
+    const day: Day = { meals: [{ name: "Unique", dishes: [dishOf(chicken, 300)] }] };
+    const dist = proteinDistribution(day);
+    expect(dist.peaks).toBe(1);
+    expect(dist.bonus).toBe(false);
+  });
+});
+
+describe("qualité protéique (§11)", () => {
+  it("100 % de protéines excellentes → score 100", () => {
+    const day: Day = { meals: [{ name: "R", dishes: [dishOf(chicken, 100)] }] };
+    expect(proteinQualityScore(day).score).toBeCloseTo(100, 6);
+  });
+
+  it("les céréales seules tirent le score vers le bas", () => {
+    const day: Day = { meals: [{ name: "R", dishes: [dishOf(rice, 300)] }] };
+    expect(proteinQualityScore(day).score).toBeLessThan(50);
+  });
+});
+
+describe("score de construction musculaire (§12)", () => {
+  const targets = (): MuscleTargets => ({
+    aminoAcids: aminoAcidTargets(70, 1.8),
+    proteinTargetG: 140,
+    energyTargetKcal: 2500,
+  });
+
+  it("journée vide → score nul, bande limitante", () => {
+    const a = analyzeMuscleProfile({ meals: [] }, targets());
+    expect(a.score.total).toBe(0);
+    expect(a.score.band).toBe("limitant");
+    expect(a.limiting).toBeNull();
+  });
+
+  it("une bonne journée protéinée et bien répartie obtient un score élevé", () => {
+    const meal = (n: string) => ({
+      name: n,
+      dishes: [dishOf(chicken, 160), dishOf(rice, 150)],
+    });
+    const day: Day = { meals: [meal("PDJ"), meal("Déj"), meal("Dîner")] };
+    const a = analyzeMuscleProfile(day, targets());
+    expect(a.score.total).toBeGreaterThan(75);
+    expect(a.score.proteinScore).toBeCloseTo(1, 6); // protéines saturées
+    expect(a.distribution.peaks).toBeGreaterThanOrEqual(3);
+  });
+
+  it("le score reste dans [0, 100]", () => {
+    const day: Day = { meals: [{ name: "R", dishes: [dishOf(chicken, 1000)] }] };
+    const a = analyzeMuscleProfile(day, targets());
+    expect(a.score.total).toBeGreaterThanOrEqual(0);
+    expect(a.score.total).toBeLessThanOrEqual(100);
+  });
+});

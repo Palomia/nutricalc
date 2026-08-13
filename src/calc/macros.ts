@@ -35,9 +35,25 @@ export interface MacroTarget {
   gPerKg: number | null; // ratio cible g/kg utilisé (null si dérivé du reste)
 }
 
+// Clés stables des neuf besoins en acides aminés indispensables (deux d'entre
+// eux sont des groupes combinés : soufrés = Met+Cys, aromatiques = Phe+Tyr).
+export type AminoAcidKey =
+  | "histidine"
+  | "isoleucine"
+  | "leucine"
+  | "lysine"
+  | "sulfur"
+  | "aromatic"
+  | "threonine"
+  | "tryptophan"
+  | "valine";
+
 export interface AminoAcid {
+  key: AminoAcidKey;
   name: string;
-  mgPerKg: number; // besoin moyen FAO/OMS (mg/kg/j)
+  mgPerKgBase: number; // minimum santé OMS (mg/kg/j), avant facteur sportif
+  aaeFactor: number; // facteur sportif du profil (temp.txt §7)
+  mgPerKg: number; // besoin ajusté = mgPerKgBase × aaeFactor
   mg: number; // besoin journalier = mgPerKg × poids de référence
 }
 
@@ -74,17 +90,19 @@ export interface MacroTargets {
   carbComponents: CarbComponent[]; // découpage des glucides
 }
 
-// Besoins moyens en acides aminés indispensables, adulte (FAO/WHO/UNU 2007).
-const AMINO_ACIDS_MG_PER_KG: [string, number][] = [
-  ["Histidine", 10],
-  ["Isoleucine", 20],
-  ["Leucine", 39],
-  ["Lysine", 30],
-  ["Acides aminés soufrés (Met + Cys)", 15],
-  ["Acides aminés aromatiques (Phe + Tyr)", 25],
-  ["Thréonine", 15],
-  ["Tryptophane", 4],
-  ["Valine", 26],
+// Besoins minimaux en acides aminés indispensables, adulte (FAO/WHO/UNU 2007,
+// repris par temp.txt §6 comme « minimum physiologique compatible avec la
+// santé », pas un optimum d'hypertrophie).
+const AMINO_ACIDS_MG_PER_KG: [AminoAcidKey, string, number][] = [
+  ["histidine", "Histidine", 10],
+  ["isoleucine", "Isoleucine", 20],
+  ["leucine", "Leucine", 39],
+  ["lysine", "Lysine", 30],
+  ["sulfur", "Acides aminés soufrés (Met + Cys)", 15],
+  ["aromatic", "Acides aminés aromatiques (Phe + Tyr)", 25],
+  ["threonine", "Thréonine", 15],
+  ["tryptophan", "Tryptophane", 4],
+  ["valine", "Valine", 26],
 ];
 
 interface FattyAcidRow {
@@ -122,12 +140,14 @@ const CARB_COMPONENTS: CarbRow[] = [
   { name: "Sucres libres / ajoutés", kind: "OMS", gramsFixed: null, percentAet: 10, note: "< 5 % AET idéalement (OMS)" },
 ];
 
-export function aminoAcidTargets(weightKg: number): AminoAcid[] {
-  return AMINO_ACIDS_MG_PER_KG.map(([name, mgPerKg]) => ({
-    name,
-    mgPerKg,
-    mg: mgPerKg * weightKg,
-  }));
+// Objectifs journaliers en AAE. `aaeFactor` (facteur sportif du profil, temp.txt
+// §7) remonte les minimums santé vers un objectif orienté performance ; à 1.0
+// on retrouve les minimums OMS bruts.
+export function aminoAcidTargets(weightKg: number, aaeFactor = 1): AminoAcid[] {
+  return AMINO_ACIDS_MG_PER_KG.map(([key, name, mgPerKgBase]) => {
+    const mgPerKg = mgPerKgBase * aaeFactor;
+    return { key, name, mgPerKgBase, aaeFactor, mgPerKg, mg: mgPerKg * weightKg };
+  });
 }
 
 export function fattyAcidTargets(energyKcal: number): FattyAcidTarget[] {
@@ -213,7 +233,7 @@ export function macroTargets(
       gramsMax: np.carbGPerKg ? np.carbGPerKg.max * weightKg : null,
       gPerKg: np.carbGPerKg ? np.carbGPerKg.target : null,
     },
-    aminoAcids: aminoAcidTargets(weightKg),
+    aminoAcids: aminoAcidTargets(weightKg, np.aaeFactor),
     fattyAcids: fattyAcidTargets(energyKcal),
     carbComponents: carbComponents(energyKcal),
   };

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { bmrMifflinStJeor, energyTarget, tdee } from "./energy";
-import { ACTIVITY_LEVELS, type Profile } from "./profile";
+import { NUTRITION_PROFILES, type NutritionGoal, type Profile } from "./profile";
 
-const male: Profile = { sex: "male", ageYears: 30, weightKg: 80, heightCm: 180, activity: "moderate", goal: "active" };
-const female: Profile = { sex: "female", ageYears: 30, weightKg: 65, heightCm: 165, activity: "moderate", goal: "active" };
+const male: Profile = { sex: "male", ageYears: 30, weightKg: 80, targetWeightKg: 80, heightCm: 180, goal: "active" };
+const female: Profile = { sex: "female", ageYears: 30, weightKg: 65, targetWeightKg: 65, heightCm: 165, goal: "active" };
 
 describe("energy", () => {
   it("BMR homme (valeur de référence)", () => {
@@ -17,19 +17,22 @@ describe("energy", () => {
   });
 
   it("homme > femme, tout égal par ailleurs", () => {
-    const common = { ageYears: 40, weightKg: 70, heightCm: 170, activity: "moderate", goal: "active" } as const;
+    const common = { ageYears: 40, weightKg: 70, targetWeightKg: 70, heightCm: 170, goal: "active" } as const;
     expect(bmrMifflinStJeor({ sex: "male", ...common })).toBeGreaterThan(
       bmrMifflinStJeor({ sex: "female", ...common }),
     );
   });
 
-  it("TDEE applique le facteur d'activité", () => {
-    expect(tdee(male)).toBeCloseTo(1780 * 1.55, 5);
+  it("TDEE applique le facteur d'activité de l'objectif", () => {
+    // Objectif « active » → facteur 1,55.
+    expect(tdee(male)).toBeCloseTo(1780 * NUTRITION_PROFILES.active.activityFactor, 5);
   });
 
-  it("TDEE croît avec le niveau d'activité", () => {
-    const levels = Object.keys(ACTIVITY_LEVELS) as (keyof typeof ACTIVITY_LEVELS)[];
-    const values = levels.map((activity) => tdee({ ...female, activity }));
+  it("TDEE croît avec le facteur d'activité de l'objectif", () => {
+    const goals = (Object.keys(NUTRITION_PROFILES) as NutritionGoal[]).sort(
+      (a, b) => NUTRITION_PROFILES[a].activityFactor - NUTRITION_PROFILES[b].activityFactor,
+    );
+    const values = goals.map((goal) => tdee({ ...female, goal }));
     const sorted = [...values].sort((a, b) => a - b);
     expect(values).toEqual(sorted);
   });

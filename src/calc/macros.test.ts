@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { KCAL_PER_G, macroTargets } from "./macros";
 import { NUTRITION_PROFILES, type Profile } from "./profile";
 
-const p: Profile = { sex: "male", ageYears: 30, weightKg: 80, heightCm: 180, activity: "moderate", goal: "active" };
+const p: Profile = { sex: "male", ageYears: 30, weightKg: 80, targetWeightKg: 80, heightCm: 180, goal: "active" };
 
 describe("macros", () => {
   it("les protéines suivent le ratio du profil et le poids de référence", () => {
