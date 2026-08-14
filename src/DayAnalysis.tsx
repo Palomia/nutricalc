@@ -5,7 +5,7 @@
 // aminé limitant, leucine par repas) et des suggestions d'aliments. La logique
 // de calcul (intake / aminoAcids / suggestions) est INCHANGÉE : ce composant ne
 // fait que présenter les résultats.
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { dayMacros, type Day, type MacroIntake } from "./calc/intake";
 import {
   analyzeMuscleProfile,
@@ -169,11 +169,50 @@ const ANIMAL_VS_PLANT_TIP: InfoTipContent = {
   ],
 };
 
+// Explication du sous-score « Leucine (seuil/repas) » du score musculaire :
+// pourquoi il diffère de la couverture JOURNALIÈRE de la leucine et peut rester
+// bas malgré un total journalier élevé.
+const LEUCINE_SUBSCORE_TIP: InfoTipContent = {
+  intro:
+    "Ce sous-score compte le NOMBRE de prises atteignant le seuil anabolique (~2,5 g de leucine), pas la couverture journalière.",
+  sections: [
+    {
+      heading: "Comment il est calculé",
+      items: [
+        "On compte les repas dont la leucine atteint ~2,5 g.",
+        "On divise par le nombre de prises anaboliques visées (dérivé du besoin protéique journalier, borné à 3-7).",
+        "Plafonné à 100 %, il pèse 20 % de la note finale.",
+      ],
+    },
+    {
+      heading: "Pourquoi il peut rester bas",
+      items: [
+        "Un total journalier élevé (ex. 287 % des besoins) ne suffit pas s'il est concentré sur peu de prises.",
+        "Répartir la leucine sur davantage de repas atteignant ~2,5 g relève ce sous-score.",
+      ],
+    },
+  ],
+};
+
 // Ligne sous-score du score musculaire (part pondérée, 0-1).
-function SubScore({ label, value, weight }: { label: string; value: number; weight: number }) {
+// `tip` optionnel : ⓘ pédagogique affiché juste après le libellé.
+function SubScore({
+  label,
+  value,
+  weight,
+  tip,
+}: {
+  label: ReactNode;
+  value: number;
+  weight: number;
+  tip?: InfoTipContent;
+}) {
   return (
     <div className="flex items-center gap-2 text-xs">
-      <span className="w-28 shrink-0 text-slate-500">{label}</span>
+      <span className="inline-flex w-40 shrink-0 items-center gap-1 whitespace-nowrap text-slate-500">
+        {label}
+        {tip && <InfoTip label="En savoir plus sur ce sous-score" tip={tip} />}
+      </span>
       <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
         <div className="h-full rounded-full bg-slate-400" style={{ width: `${value * 100}%` }} />
       </div>
@@ -209,7 +248,7 @@ function MuscleAnalysisPanel({ analysis }: { analysis: MuscleAnalysis }) {
         <div className="mt-3 space-y-1">
           <SubScore label="Protéines" value={score.proteinScore} weight={0.3} />
           <SubScore label="Couverture AAE" value={score.aaeScore} weight={0.25} />
-          <SubScore label="Leucine" value={score.leucineScore} weight={0.2} />
+          <SubScore label="Leucine (seuil/repas)" value={score.leucineScore} weight={0.2} tip={LEUCINE_SUBSCORE_TIP} />
           <SubScore label="Calories" value={score.calorieScore} weight={0.15} />
           <SubScore label="Répartition" value={score.distributionScore} weight={0.1} />
         </div>
@@ -235,7 +274,7 @@ function MuscleAnalysisPanel({ analysis }: { analysis: MuscleAnalysis }) {
           </p>
           <details className="group mt-2">
             <summary className="cursor-pointer text-xs text-slate-600 hover:underline">
-              Couverture des 9 acides aminés indispensables
+              Couverture journalière des 9 acides aminés indispensables
             </summary>
             <div className="mt-2 space-y-1">
               {[...aminoAcids].sort((a, b) => a.coverage - b.coverage).map((c) => (
@@ -253,6 +292,12 @@ function MuscleAnalysisPanel({ analysis }: { analysis: MuscleAnalysis }) {
             </div>
             <p className="mt-1 text-[10px] text-slate-400">
               Objectifs = minimums OMS × facteur sportif du profil.
+            </p>
+            <p className="mt-1 text-[10px] text-slate-400">
+              Couverture journalière = apport du jour ÷ besoin ; elle peut dépasser
+              100 %. À ne pas confondre avec le sous-score « Leucine (seuil/repas) »
+              du score, qui compte le nombre de prises atteignant ~2,5 g de leucine
+              (plafonné à 100 %).
             </p>
           </details>
         </div>
