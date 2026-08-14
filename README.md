@@ -35,12 +35,33 @@ python -m nutricalc # démo sur un profil synthétique
 
 ## Build/CI via Nix
 
-`nix build .#default` construit **et teste le POC Python** (pytest). L'app web
-se construit avec `pnpm` dans le devShell ; la CI enchaîne les deux (voir
+`nix build .#default` construit **et teste le POC Python** (pytest), sans
+réseau. `nix build .#web` construit le site (pytest → `pnpm test`, puis
+`pnpm build`) : c'est l'artefact déployé. La CI enchaîne les deux (voir
 [DESIGN.md](DESIGN.md)).
 
 ```sh
 nix build .#default --print-build-logs
+nix build .#web --print-build-logs
+```
+
+Derrière un proxy TLS d'entreprise, `.#web` a besoin du CA du proxy pour
+joindre le registre npm :
+
+```sh
+NIX_SSL_CERT_FILE=/chemin/vers/bundle-avec-ca.crt nix build .#web
+```
+
+## Déploiement
+
+`nixosModules.default` expose `services.nutricalc` : Caddy sert le `dist`
+construit par `.#web`.
+
+```nix
+services.nutricalc = {
+  enable = true;
+  hostName = "nutricalc.example.com";
+};
 ```
 
 ## Structure

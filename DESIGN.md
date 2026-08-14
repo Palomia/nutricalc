@@ -94,9 +94,14 @@ Aligné sur les conventions de `countdown` (etrobert) :
   `node`, `pnpm`, `python` viennent du devShell.
 - App web : **pnpm + Vite + React + TypeScript + Tailwind + Vitest**.
 - `nix build .#default` construit **et teste le POC Python** via `doCheck`
-  (pytest). L'app web se construit avec `pnpm` dans le devShell (pas de
-  fixed-output derivation Nix : le sandbox n'a pas le CA du proxy
-  d'entreprise et ne peut pas joindre le registre npm). La CI teste les deux.
+  (pytest), sans réseau. `nix build .#web` construit le site déployé : les
+  deps npm passent par `fetchPnpmDeps`, une fixed-output derivation qui a le
+  réseau et hérite de `http(s)_proxy` et `NIX_SSL_CERT_FILE` de l'appelant
+  (`lib.fetchers.proxyImpureEnvVars`) — derrière le proxy d'entreprise, il
+  faut donc pointer `NIX_SSL_CERT_FILE` sur un bundle contenant son CA. La CI
+  teste les deux, plus le parcours `pnpm` en devShell.
+- Déploiement : `nixosModules.default` (`services.nutricalc.{enable,hostName}`)
+  fait servir le `dist` par Caddy.
 - **CI GitHub Actions** sur runner `ubuntu-latest` avec Nix installé à la volée
   (countdown vise un runner self-hosted privé — non réutilisable ici).
 - `base: "./"` dans la config Vite pour un service depuis un sous-chemin.
