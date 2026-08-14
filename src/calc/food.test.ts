@@ -1,37 +1,61 @@
 import { describe, expect, it } from "vitest";
-import { FOODS, filterFoods, type Food } from "./food";
+import { FOOD_CATEGORIES, filterFoods, type Food } from "./food";
+import { PRESET_FOODS, PRESET_FOOD_IDS, PRESET_FOODS_BY_ID } from "./presetFoods";
 
-describe("food — attributs de régime", () => {
+describe("catégories", () => {
+  it("inclut « Autres » (repli hors des 5 catégories principales)", () => {
+    expect(FOOD_CATEGORIES).toContain("Autres");
+    expect(FOOD_CATEGORIES).toHaveLength(6);
+  });
+});
+
+describe("presetFoods — cohérence des aliments réels (extraits de foods.fr.json)", () => {
   it("tout aliment vegan est aussi végétarien (vegan ⇒ vegetarian)", () => {
-    for (const f of FOODS) {
+    for (const f of PRESET_FOODS) {
       if (f.vegan) expect(f.vegetarian, `${f.id} vegan mais non végétarien`).toBe(true);
     }
   });
 
   it("les chairs animales (viande/poisson) ne sont ni végétariennes ni vegan", () => {
-    const chairs = ["poulet-blanc-cuit", "steak-hache-15-cuit", "saumon-cuit"];
+    const chairs = [PRESET_FOOD_IDS.chicken, PRESET_FOOD_IDS.beef, PRESET_FOOD_IDS.salmon];
     for (const id of chairs) {
-      const f = FOODS.find((x) => x.id === id)!;
+      const f = PRESET_FOODS_BY_ID[id];
       expect(f.vegetarian, `${id} devrait être non végétarien`).toBe(false);
       expect(f.vegan, `${id} devrait être non vegan`).toBe(false);
     }
   });
 
   it("œuf et laitages sont végétariens mais non vegan", () => {
-    const ovoLacto = ["oeuf-dur", "emmental", "lait-demi-ecreme", "yaourt-nature"];
+    const ovoLacto = [PRESET_FOOD_IDS.egg, PRESET_FOOD_IDS.cheese, PRESET_FOOD_IDS.milk, PRESET_FOOD_IDS.yogurt];
     for (const id of ovoLacto) {
-      const f = FOODS.find((x) => x.id === id)!;
+      const f = PRESET_FOODS_BY_ID[id];
       expect(f.vegetarian, `${id} devrait être végétarien`).toBe(true);
       expect(f.vegan, `${id} ne devrait pas être vegan`).toBe(false);
     }
   });
 
-  it("tous les champs de régime sont renseignés (booléens) sur chaque aliment", () => {
-    for (const f of FOODS) {
+  it("champs de régime renseignés (booléens) et macros numériques sur chaque preset", () => {
+    for (const f of PRESET_FOODS) {
       expect(typeof f.vegetarian).toBe("boolean");
       expect(typeof f.vegan).toBe("boolean");
       expect(typeof f.unprocessed).toBe("boolean");
+      expect(Number.isFinite(f.kcalPer100g)).toBe(true);
+      expect(Number.isFinite(f.proteinPer100g)).toBe(true);
     }
+  });
+
+  it("chaque id de PRESET_FOOD_IDS pointe vers un aliment présent", () => {
+    for (const id of Object.values(PRESET_FOOD_IDS)) {
+      expect(PRESET_FOODS_BY_ID[id], `preset manquant : ${id}`).toBeDefined();
+    }
+  });
+
+  it("un profil d'AAE présent porte les 9 clés attendues", () => {
+    const withAa = PRESET_FOODS.find((f) => f.aaProfile);
+    expect(withAa).toBeDefined();
+    expect(Object.keys(withAa!.aaProfile!).sort()).toEqual(
+      ["aromatic", "histidine", "isoleucine", "leucine", "lysine", "sulfur", "threonine", "tryptophan", "valine"],
+    );
   });
 });
 

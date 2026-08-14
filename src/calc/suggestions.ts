@@ -7,21 +7,19 @@
 //
 // Heuristique, simple et défendable :
 //   1. Prioriser les aliments qui RELÈVENT l'acide aminé limitant du jour
-//      (riches, via `AMINO_ACID_PROFILES`, dans l'AA le moins couvert).
+//      (riches, via le profil d'AAE inline, dans l'AA le moins couvert).
 //   2. Secondairement, aider à combler le déficit protéique, sans faire exploser
 //      les calories (pénalité douce sur la densité énergétique).
 //   3. Respecter le régime actif (`FoodFilter`) et éviter de resuggérer un
 //      aliment déjà très présent dans la journée (l'esprit est de diversifier).
 //
-// Module PUR : aucune dépendance UI, testable sans DOM. Valeurs INDICATIVES
-// (mêmes profils d'AAE que le reste du moteur).
-import {
-  AMINO_ACID_PROFILES,
-  FOODS,
-  filterFoods,
-  type Food,
-  type FoodFilter,
-} from "./food";
+// Module PUR : aucune dépendance UI, testable sans DOM. Le classement porte sur
+// un ensemble de CANDIDATS fourni par l'appelant (`candidates`) — en pratique
+// les « aliments courants » (presets + aliments déjà sélectionnés du registre,
+// cf. useMeals). Ce choix évite de classer les 7 793 aliments FR à chaque frappe
+// (perf) tout en restant pertinent : les suggestions restituent des sources
+// usuelles complémentaires. Valeurs INDICATIVES.
+import { filterFoods, type Food, type FoodFilter } from "./food";
 import { analyzeMuscleProfile, type MuscleTargets } from "./aminoAcids";
 import type { AminoAcidKey } from "./macros";
 import type { Day } from "./intake";
@@ -59,11 +57,11 @@ export interface SuggestionOptions {
 // pénalise doucement les aliments très caloriques et peu utiles.
 const WEIGHTS = { limitingAa: 0.7, protein: 0.3, kcalPenalty: 0.15 } as const;
 
-// mg de l'AA `key` apportés par 100 g de l'aliment : profil (mg/g de protéine)
-// × grammes de protéines pour 100 g. Aliment sans profil → 0.
+// mg de l'AA `key` apportés par 100 g de l'aliment : profil INLINE (mg/g de
+// protéine) × grammes de protéines pour 100 g. Aliment sans profil → 0.
 function limitingBoostPer100g(food: Food, key: AminoAcidKey): number {
   if (!food.aaProfile) return 0;
-  return AMINO_ACID_PROFILES[food.aaProfile][key] * food.proteinPer100g;
+  return food.aaProfile[key] * food.proteinPer100g;
 }
 
 // Total de grammes déjà présents pour chaque aliment (id → grammes), pour
@@ -77,11 +75,13 @@ function gramsByFood(day: Day): Record<string, number> {
   return out;
 }
 
-// Classe les aliments de `FOODS` selon leur capacité à COMPLÉTER la journée.
+// Classe les aliments `candidates` selon leur capacité à COMPLÉTER la journée.
 // Retourne un top N d'objets `{ food, reason }`. Peut renvoyer une liste vide
 // (aucun candidat pertinent après filtrage), notamment si tous les aliments
-// utiles sont déjà très présents.
+// utiles sont déjà très présents. `candidates` est l'ensemble des aliments
+// courants fourni par l'appelant (presets + registre), pas toute la base FR.
 export function suggestFoods(
+  candidates: Food[],
   day: Day,
   muscleTargets: MuscleTargets,
   options: SuggestionOptions = {},
@@ -97,11 +97,11 @@ export function suggestFoods(
   const deficitProteinG = Math.max(0, proteinTargetG - analysis.dayProteinG);
 
   const present = gramsByFood(day);
-  const candidates = filterFoods(FOODS, options.filter ?? {}).filter(
+  const pool = filterFoods(candidates, options.filter ?? {}).filter(
     (f) => (present[f.id] ?? 0) < threshold,
   );
 
-  const scored = candidates.map((food) => {
+  const scored = pool.map((food) => {
     // Composante 1 : relève l'AA limitant (fraction de l'objectif du jour
     // couverte par 100 g). Nulle en l'absence d'AA limitant analysable.
     const aaFrac =

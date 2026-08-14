@@ -1,33 +1,42 @@
-// Base d'aliments de référence — macronutriments pour 100 g.
+// Type `Food` et utilitaires de régime — SANS base d'aliments en dur.
 //
-// Valeurs INDICATIVES tirées de la table CIQUAL de l'ANSES (composition
-// nutritionnelle des aliments, données publiques ANSES/Etalab, millésime 2017
-// privilégié), pour 100 g de partie comestible. Arrondies. Certaines lignes
-// mêlent des millésimes ou des aliments génériques proches et sont à revalider
-// contre le tableau officiel (https://ciqual.anses.fr) avant tout usage réel.
+// Depuis le câblage de la base unique (tâche #14), l'app ne porte plus de liste
+// d'aliments curatée : la SEULE source d'aliments est `data/foods.fr.json`
+// (7 793 entrées USDA SR Legacy traduites), chargée PARESSEUSEMENT via
+// `foodsFr.ts`. Ce module ne conserve donc que :
+//   - le type `Food` (macros pour 100 g + profil d'AAE INLINE + drapeaux régime) ;
+//   - le filtre pur `filterFoods` ;
+//   - la liste des catégories FR ;
+//   - des profils d'AAE de référence (`AMINO_ACID_PROFILES`), utiles à la
+//     construction de fixtures de test et à la documentation (plus utilisés par
+//     l'app, qui lit le profil précalculé de chaque aliment FR).
 //
-// L'énergie (`kcalPer100g`) suit la valeur CIQUAL de l'aliment ; elle ne
-// correspond donc pas exactement au recalcul 4/9/4 depuis les macros.
+// Le petit ensemble d'aliments réels utilisé comme cibles de presets vit dans
+// `presetFoods.ts` (aliments EXTRAITS de foods.fr.json, pas une seconde source).
 
 import type { AminoAcidKey } from "./macros";
 
+// Catégories FR de l'app. « Autres » est le repli hors des 5 catégories
+// principales (plats composés, boissons, sauces…) présent dans foods.fr.json.
 export type FoodCategory =
   | "Féculents & pains"
   | "Viandes, poissons, œufs"
   | "Produits laitiers"
   | "Fruits & légumes"
-  | "Matières grasses & oléagineux";
+  | "Matières grasses & oléagineux"
+  | "Autres";
 
 // Profil en acides aminés indispensables, exprimé en mg par g de protéine.
-// Approche pragmatique (temp.txt) : plutôt que de saisir chaque AAE par aliment,
-// on rattache l'aliment à un profil de référence (schéma d'AA de sa source
-// protéique) puis on dérive l'apport = profil × grammes de protéines.
+// `foods.fr.json` fournit ce profil PRÉCALCULÉ par aliment (9 clés, groupes
+// combinés déjà agrégés : sulfur = Met+Cys, aromatic = Phe+Tyr). L'apport en AAE
+// se dérive alors : profil × grammes de protéines (cf. aminoAcids.ts).
 export type AminoAcidProfile = Record<AminoAcidKey, number>;
 
 // Profils de référence (mg d'AAE par g de protéine). Valeurs INDICATIVES issues
 // des schémas d'acides aminés FAO/WHO et de compositions alimentaires usuelles,
-// arrondies ; à revalider avant tout usage réel. Les groupes combinés suivent
-// les cibles : sulfur = Met+Cys, aromatic = Phe+Tyr.
+// arrondies. Ne sont PLUS utilisés par l'app (chaque aliment FR porte son propre
+// profil précalculé) ; conservés comme repères et pour bâtir des fixtures de
+// test synthétiques lisibles.
 export const AMINO_ACID_PROFILES = {
   egg:    { histidine: 24, isoleucine: 54, leucine: 86, lysine: 70, sulfur: 57, aromatic: 98, threonine: 47, tryptophan: 17, valine: 66 },
   dairy:  { histidine: 27, isoleucine: 47, leucine: 95, lysine: 78, sulfur: 33, aromatic: 102, threonine: 44, tryptophan: 14, valine: 64 },
@@ -51,65 +60,27 @@ export interface Food {
   proteinPer100g: number;
   lipidPer100g: number;
   carbPer100g: number;
-  // Découpage protéique (optionnel : absent pour les aliments à protéines
-  // négligeables — huiles, fruits, légumes aqueux — dont les AAE ne comptent pas).
-  aaProfile?: AminoAcidProfileKey;
-  // --- Attributs de régime alimentaire (tâche #7) ---
-  // Végétarien : aucune chair animale (ni viande, ni poisson, ni fruits de
-  // mer). Les œufs et les produits laitiers restent autorisés.
+  // Profil d'AAE INLINE (mg / g de protéine), précalculé côté base FR. Optionnel :
+  // absent pour les aliments dont le profil d'acides aminés n'est pas fourni
+  // (protéines négligeables ou couverture d'AA incomplète) → aucun AAE dérivé.
+  aaProfile?: AminoAcidProfile;
+  // --- Attributs de régime alimentaire ---
+  // Végétarien : aucune chair animale (ni viande, ni poisson, ni fruits de mer).
+  // Œufs et produits laitiers restent autorisés.
   vegetarian: boolean;
-  // Vegan : aucun produit d'origine animale (ni viande/poisson, ni œufs, ni
-  // laitages, ni miel…). Par cohérence : vegan ⇒ vegetarian.
+  // Vegan : aucun produit d'origine animale. Par cohérence : vegan ⇒ vegetarian.
   vegan: boolean;
-  // Non transformé : aliment brut ou peu transformé, dans l'esprit du groupe 1
-  // de la classification NOVA (fruits, légumes, œufs, viandes/poissons nature,
-  // légumes secs, oléagineux nature, lait/yaourt nature…). Les produits ayant
-  // subi une transformation notable (pain, pâtes, fromage affiné, huile
-  // raffinée…) sont considérés comme transformés (false).
+  // Non transformé : aliment brut ou peu transformé (esprit NOVA groupe 1).
   unprocessed: boolean;
+  // --- Traçabilité / heuristique (optionnels, portés par les aliments FR) ---
+  // Libellé anglais d'origine (USDA), utile en secours à l'affichage.
+  nameEn?: string;
+  // Identifiant FoodData Central (traçabilité).
+  fdcId?: number;
+  // Régime déduit d'une catégorie hétérogène (valeur « au mieux ») : à ne pas
+  // masquer abusivement lors du filtrage (cf. foodsFr.matchesDiet).
+  dietUncertain?: boolean;
 }
-
-// Petite base de départ (aliments génériques CIQUAL). À enrichir au besoin.
-export const FOODS: Food[] = [
-  // Féculents & pains
-  { id: "riz-blanc-cuit", name: "Riz blanc, cuit", category: "Féculents & pains", kcalPer100g: 143, proteinPer100g: 2.9, lipidPer100g: 0.4, carbPer100g: 31.8, aaProfile: "cereal", vegetarian: true, vegan: true, unprocessed: true },
-  { id: "pates-cuites", name: "Pâtes, cuites", category: "Féculents & pains", kcalPer100g: 151, proteinPer100g: 4.9, lipidPer100g: 0.8, carbPer100g: 29.7, aaProfile: "cereal", vegetarian: true, vegan: true, unprocessed: false },
-  { id: "pain-baguette", name: "Pain, baguette courante", category: "Féculents & pains", kcalPer100g: 274, proteinPer100g: 8.6, lipidPer100g: 2.5, carbPer100g: 54.2, aaProfile: "cereal", vegetarian: true, vegan: true, unprocessed: false },
-  { id: "pomme-de-terre-cuite", name: "Pomme de terre, cuite à l'eau", category: "Féculents & pains", kcalPer100g: 73, proteinPer100g: 2.0, lipidPer100g: 0.1, carbPer100g: 15.0, aaProfile: "legume", vegetarian: true, vegan: true, unprocessed: true },
-  { id: "lentilles-cuites", name: "Lentilles, cuites", category: "Féculents & pains", kcalPer100g: 116, proteinPer100g: 10.1, lipidPer100g: 0.6, carbPer100g: 15.2, aaProfile: "legume", vegetarian: true, vegan: true, unprocessed: true },
-
-  // Viandes, poissons, œufs
-  { id: "poulet-blanc-cuit", name: "Blanc de poulet, cuit", category: "Viandes, poissons, œufs", kcalPer100g: 137, proteinPer100g: 29.2, lipidPer100g: 1.8, carbPer100g: 1.2, aaProfile: "meat", vegetarian: false, vegan: false, unprocessed: true },
-  { id: "steak-hache-15-cuit", name: "Steak haché de bœuf 15% MG, cuit", category: "Viandes, poissons, œufs", kcalPer100g: 239, proteinPer100g: 23.6, lipidPer100g: 16.1, carbPer100g: 0, aaProfile: "meat", vegetarian: false, vegan: false, unprocessed: true },
-  { id: "saumon-cuit", name: "Saumon, cuit au four", category: "Viandes, poissons, œufs", kcalPer100g: 210, proteinPer100g: 22.1, lipidPer100g: 13.5, carbPer100g: 0, aaProfile: "fish", vegetarian: false, vegan: false, unprocessed: true },
-  { id: "oeuf-dur", name: "Œuf, cuit dur", category: "Viandes, poissons, œufs", kcalPer100g: 134, proteinPer100g: 13.5, lipidPer100g: 8.6, carbPer100g: 0.5, aaProfile: "egg", vegetarian: true, vegan: false, unprocessed: true },
-
-  // Produits laitiers
-  { id: "emmental", name: "Emmental", category: "Produits laitiers", kcalPer100g: 380, proteinPer100g: 28.2, lipidPer100g: 28.3, carbPer100g: 0, aaProfile: "dairy", vegetarian: true, vegan: false, unprocessed: false },
-  { id: "lait-demi-ecreme", name: "Lait demi-écrémé, UHT", category: "Produits laitiers", kcalPer100g: 46, proteinPer100g: 3.3, lipidPer100g: 1.5, carbPer100g: 4.8, aaProfile: "dairy", vegetarian: true, vegan: false, unprocessed: true },
-  { id: "yaourt-nature", name: "Yaourt nature", category: "Produits laitiers", kcalPer100g: 57, proteinPer100g: 4.2, lipidPer100g: 2.7, carbPer100g: 3.7, aaProfile: "dairy", vegetarian: true, vegan: false, unprocessed: true },
-
-  // Fruits & légumes (protéines négligeables : pas de découpage AAE)
-  { id: "pomme", name: "Pomme, crue", category: "Fruits & légumes", kcalPer100g: 52, proteinPer100g: 0.3, lipidPer100g: 0.3, carbPer100g: 11.6, vegetarian: true, vegan: true, unprocessed: true },
-  { id: "banane", name: "Banane, crue", category: "Fruits & légumes", kcalPer100g: 90, proteinPer100g: 1.0, lipidPer100g: 0.3, carbPer100g: 19.6, vegetarian: true, vegan: true, unprocessed: true },
-  { id: "tomate", name: "Tomate, crue", category: "Fruits & légumes", kcalPer100g: 18, proteinPer100g: 0.9, lipidPer100g: 0.3, carbPer100g: 2.3, vegetarian: true, vegan: true, unprocessed: true },
-  { id: "brocoli-cuit", name: "Brocoli, cuit", category: "Fruits & légumes", kcalPer100g: 26, proteinPer100g: 2.1, lipidPer100g: 0.8, carbPer100g: 1.1, vegetarian: true, vegan: true, unprocessed: true },
-
-  // Matières grasses & oléagineux
-  { id: "huile-olive", name: "Huile d'olive", category: "Matières grasses & oléagineux", kcalPer100g: 900, proteinPer100g: 0, lipidPer100g: 100, carbPer100g: 0, vegetarian: true, vegan: true, unprocessed: false },
-  { id: "amandes", name: "Amandes", category: "Matières grasses & oléagineux", kcalPer100g: 630, proteinPer100g: 21.1, lipidPer100g: 53.4, carbPer100g: 7.9, aaProfile: "nuts", vegetarian: true, vegan: true, unprocessed: true },
-  // Matière grasse laitière : végétarienne mais non vegan. Valeurs CIQUAL
-  // indicatives (~717 kcal, 0,7 g prot, 81 g lip, 0,6 g gluc /100 g).
-  { id: "beurre", name: "Beurre", category: "Matières grasses & oléagineux", kcalPer100g: 717, proteinPer100g: 0.7, lipidPer100g: 81, carbPer100g: 0.6, vegetarian: true, vegan: false, unprocessed: false },
-  // Condiments pour la vinaigrette. Valeurs CIQUAL indicatives, protéines
-  // négligeables (pas de découpage AAE).
-  { id: "vinaigre", name: "Vinaigre", category: "Matières grasses & oléagineux", kcalPer100g: 20, proteinPer100g: 0, lipidPer100g: 0, carbPer100g: 0.6, vegetarian: true, vegan: true, unprocessed: false },
-  { id: "moutarde", name: "Moutarde", category: "Matières grasses & oléagineux", kcalPer100g: 150, proteinPer100g: 6, lipidPer100g: 10, carbPer100g: 6, vegetarian: true, vegan: true, unprocessed: false },
-];
-
-export const FOODS_BY_ID: Record<string, Food> = Object.fromEntries(
-  FOODS.map((f) => [f.id, f]),
-);
 
 export const FOOD_CATEGORIES: FoodCategory[] = [
   "Féculents & pains",
@@ -117,19 +88,23 @@ export const FOOD_CATEGORIES: FoodCategory[] = [
   "Produits laitiers",
   "Fruits & légumes",
   "Matières grasses & oléagineux",
+  "Autres",
 ];
 
-// Critères de filtrage par régime. Chaque champ est optionnel : quand il vaut
-// `true` on n'exige que les aliments qui satisfont le critère ; quand il est
-// absent (ou `false`) le critère n'est pas appliqué (aucune restriction).
+// Critères de filtrage par régime. Chaque champ est optionnel : à `true` on
+// n'exige que les aliments qui satisfont le critère ; absent (ou `false`) le
+// critère n'est pas appliqué.
 export interface FoodFilter {
   vegetarian?: boolean;
   vegan?: boolean;
   unprocessed?: boolean;
 }
 
-// Filtre pur : renvoie les aliments qui satisfont TOUS les critères actifs
-// (ET logique). Un critère à `false`/absent est ignoré. Ne mute pas l'entrée.
+// Filtre pur STRICT : renvoie les aliments qui satisfont TOUS les critères
+// actifs (ET logique). Un critère à `false`/absent est ignoré. Ne mute pas
+// l'entrée. Utilisé par le moteur de suggestions. Pour la recherche à la
+// saisie, un filtre PLUS TOLÉRANT (qui n'écarte pas les régimes « incertains »)
+// est appliqué par `foodsFr.matchesDiet`.
 export function filterFoods(foods: Food[], filter: FoodFilter): Food[] {
   return foods.filter(
     (f) =>

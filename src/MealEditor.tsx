@@ -5,7 +5,9 @@
 // AUCUNE analyse ici : la couverture des cibles et l'analyse anabolique vivent
 // dans l'onglet « Comptes rendus ». Tout l'état vient du hook `useMeals` pour
 // être partagé avec l'analyse.
-import { FOODS_BY_ID, FOOD_CATEGORIES } from "./calc/food";
+import { useEffect, useRef, useState } from "react";
+import type { Food, FoodFilter } from "./calc/food";
+import { searchFoodsFr } from "./calc/foodsFr";
 import { dishMacros, mealMacros, type MacroIntake } from "./calc/intake";
 import { COOKING_METHODS, cookingIngredients, VINAIGRETTE, type CookingMethod } from "./calc/cooking";
 import { toGrams, UNITS, UNIT_LABELS } from "./calc/units";
@@ -116,31 +118,131 @@ function CookingMenu({ onSelect }: { onSelect: (method: CookingMethod) => void }
   );
 }
 
-export function MealEditor({ meals: m }: { meals: UseMeals }) {
-  const { meals, day, savedMeals, savedDishes, filters, setFilters, filteredFoods } = m;
+// Champ de recherche d'ingrédient (combobox) sur les 7 793 aliments FR, chargés
+// PARESSEUSEMENT à la première ouverture. Respecte les filtres de régime (mode
+// tolérant : les régimes « incertains » ne sont pas masqués mais signalés).
+function FoodCombobox({
+  value,
+  filters,
+  onSelect,
+}: {
+  value: Food | undefined;
+  filters: FoodFilter;
+  onSelect: (food: Food) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<Food[]>([]);
+  const [loading, setLoading] = useState(false);
+  const boxRef = useRef<HTMLDivElement>(null);
 
-  // Options d'un <select> d'ingrédient, groupées par catégorie et restreintes
-  // au filtre. L'aliment déjà sélectionné est toujours conservé (même s'il ne
-  // passe plus le filtre) et signalé « hors filtre », pour ne pas le faire
-  // disparaître silencieusement et corrompre le state.
-  const foodOptions = (selectedId: string) => {
-    const selected = FOODS_BY_ID[selectedId];
-    const outsideFilter = !!selected && !filteredFoods.some((f) => f.id === selectedId);
-    return FOOD_CATEGORIES.map((cat) => {
-      const foods = filteredFoods.filter((f) => f.category === cat);
-      if (outsideFilter && selected.category === cat) foods.push(selected);
-      if (foods.length === 0) return null;
-      return (
-        <optgroup key={cat} label={cat}>
-          {foods.map((f) => (
-            <option key={f.id} value={f.id}>
-              {outsideFilter && f.id === selectedId ? `${f.name} (hors filtre)` : f.name}
-            </option>
-          ))}
-        </optgroup>
-      );
-    });
-  };
+  // Fermeture au clic à l'extérieur.
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+
+  // Recherche (léger debounce) : déclenche le chargement paresseux de la base.
+  useEffect(() => {
+    if (!open) return;
+    let alive = true;
+    setLoading(true);
+    const t = setTimeout(() => {
+      searchFoodsFr(query, filters)
+        .then((r) => {
+          if (alive) {
+            setResults(r);
+            setLoading(false);
+          }
+        })
+        .catch(() => {
+          if (alive) {
+            setResults([]);
+            setLoading(false);
+          }
+        });
+    }, 120);
+    return () => {
+      alive = false;
+      clearTimeout(t);
+    };
+  }, [open, query, filters]);
+
+  const anyDietFilter = !!filters.vegetarian || !!filters.vegan;
+
+  return (
+    <div ref={boxRef} className="relative flex-1">
+      <button
+        type="button"
+        onClick={() => {
+          setOpen((o) => !o);
+          setQuery("");
+        }}
+        className="flex w-full items-center justify-between gap-2 rounded border border-slate-300 bg-white px-2 py-1 text-left focus:border-emerald-500 focus:outline-none"
+      >
+        <span className={"truncate " + (value ? "" : "text-slate-400")}>
+          {value ? value.name : "Choisir un aliment…"}
+        </span>
+        <span aria-hidden className="shrink-0 text-slate-400">▾</span>
+      </button>
+      {open && (
+        <div className="absolute left-0 z-20 mt-1 w-[30rem] max-w-[80vw] rounded-lg border border-slate-200 bg-white shadow-lg">
+          <div className="border-b border-slate-100 p-2">
+            <input
+              autoFocus
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Rechercher un aliment (base de 7 793)…"
+              className="w-full rounded border border-slate-300 px-2 py-1 text-sm focus:border-emerald-500 focus:outline-none"
+            />
+          </div>
+          <ul className="max-h-72 overflow-auto py-1">
+            {loading && <li className="px-3 py-2 text-xs text-slate-400">Chargement…</li>}
+            {!loading && results.length === 0 && (
+              <li className="px-3 py-2 text-xs text-slate-400">Aucun aliment trouvé.</li>
+            )}
+            {!loading &&
+              results.map((f) => (
+                <li key={f.id}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSelect(f);
+                      setOpen(false);
+                    }}
+                    className="flex w-full items-baseline justify-between gap-3 px-3 py-1.5 text-left text-sm hover:bg-emerald-50"
+                  >
+                    <span className="min-w-0 flex-1 truncate text-slate-700">
+                      {f.name}
+                      {anyDietFilter && f.dietUncertain && (
+                        <span className="ml-1 rounded bg-amber-100 px-1 text-[10px] text-amber-700">
+                          régime incertain
+                        </span>
+                      )}
+                    </span>
+                    <span className="shrink-0 text-xs tabular-nums text-slate-400" title={f.category}>
+                      {round(f.kcalPer100g)} kcal · P {one(f.proteinPer100g)}
+                    </span>
+                  </button>
+                </li>
+              ))}
+          </ul>
+          <p className="border-t border-slate-100 px-3 py-1.5 text-[10px] text-slate-400">
+            Base USDA SR Legacy traduite (pour 100 g). Noms parfois littéraux ;
+            régime heuristique (cf. « régime incertain »).
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function MealEditor({ meals: m }: { meals: UseMeals }) {
+  const { meals, day, savedMeals, savedDishes, filters, setFilters } = m;
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -247,13 +349,11 @@ export function MealEditor({ meals: m }: { meals: UseMeals }) {
                         <div className="space-y-2">
                           {dish.ingredients.map((ing) => (
                             <div key={ing.id} className="flex items-center gap-2 text-sm">
-                              <select
-                                value={ing.foodId}
-                                onChange={(e) => m.setIngredient(meal.id, dish.id, ing.id, { foodId: e.target.value })}
-                                className="flex-1 rounded border border-slate-300 bg-white px-2 py-1 focus:border-emerald-500 focus:outline-none"
-                              >
-                                {foodOptions(ing.foodId)}
-                              </select>
+                              <FoodCombobox
+                                value={m.resolveFood(ing.foodId)}
+                                filters={filters}
+                                onSelect={(food) => m.setIngredientFood(meal.id, dish.id, ing.id, food)}
+                              />
                               <input
                                 type="number"
                                 min={0}
@@ -332,8 +432,8 @@ export function MealEditor({ meals: m }: { meals: UseMeals }) {
       )}
 
       <p className="mt-4 text-xs text-slate-400">
-        Valeurs nutritionnelles indicatives (table CIQUAL/ANSES, pour 100 g), à
-        revalider. Rendez-vous dans « Comptes rendus » pour l'analyse de la journée.
+        Valeurs nutritionnelles indicatives (USDA SR Legacy traduite, pour 100 g),
+        à revalider. Rendez-vous dans « Comptes rendus » pour l'analyse de la journée.
       </p>
     </section>
   );

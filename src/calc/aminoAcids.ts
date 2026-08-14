@@ -8,9 +8,8 @@
 // végétariens/végétaliens ou très céréaliers, où la quantité masque une qualité
 // insuffisante.
 //
-// Toutes les valeurs sont INDICATIVES et pédagogiques (cf. profils d'AAE dans
-// food.ts) ; le moteur est pragmatique, pas une référence clinique.
-import { AMINO_ACID_PROFILES } from "./food";
+// Toutes les valeurs sont INDICATIVES et pédagogiques (profil d'AAE INLINE porté
+// par chaque aliment FR) ; le moteur est pragmatique, pas une référence clinique.
 import type { AminoAcid, AminoAcidKey } from "./macros";
 import { dayMacros, mealMacros, type Day, type Ingredient, type Meal } from "./intake";
 
@@ -41,13 +40,14 @@ function ingredientProteinG(i: Ingredient): number {
   return (i.food.proteinPer100g * i.grams) / 100;
 }
 
-// mg d'AAE apportés par un ingrédient : profil de la source (mg/g de protéine)
-// × grammes de protéines. Aliment sans profil (protéines négligeables) → zéro.
+// mg d'AAE apportés par un ingrédient : profil INLINE de l'aliment (mg/g de
+// protéine) × grammes de protéines. Aliment sans profil (protéines négligeables
+// ou profil d'AA absent dans la base FR) → zéro (repli, comme aujourd'hui).
 export function ingredientAminoAcids(i: Ingredient): AminoAcidAmounts {
   const out = zeroAminoAcids();
   const proteinG = ingredientProteinG(i);
-  if (!i.food.aaProfile || proteinG <= 0) return out;
-  const profile = AMINO_ACID_PROFILES[i.food.aaProfile];
+  const profile = i.food.aaProfile;
+  if (!profile || proteinG <= 0) return out;
   for (const k of AMINO_ACID_KEYS) out[k] = profile[k] * proteinG;
   return out;
 }

@@ -4,7 +4,9 @@
 // Logique PURE et testable : chaque combo se résout en une liste d'ingrédients
 // {foodId, grams}. Le MealPlanner injecte ensuite ces ingrédients via son
 // mécanisme d'ajout habituel (ids frais, persistance automatique). Les `foodId`
-// référencent des aliments présents dans `FOODS_BY_ID` (cf. food.ts).
+// référencent des aliments réels de la base FR via `PRESET_FOOD_IDS`
+// (cf. presetFoods.ts, extraits de foods.fr.json).
+import { PRESET_FOOD_IDS as F } from "./presetFoods";
 
 // Un ingrédient de combo, avant attribution d'un id d'édition par le composant.
 export interface ComboIngredient {
@@ -29,9 +31,9 @@ export const COOKING_FAT_GRAMS = 10;
 export function cookingIngredients(method: CookingMethod): ComboIngredient[] {
   switch (method) {
     case "beurre":
-      return [{ foodId: "beurre", grams: COOKING_FAT_GRAMS }];
+      return [{ foodId: F.butter, grams: COOKING_FAT_GRAMS }];
     case "huile-olive":
-      return [{ foodId: "huile-olive", grams: COOKING_FAT_GRAMS }];
+      return [{ foodId: F.oliveOil, grams: COOKING_FAT_GRAMS }];
     case "sec":
       return [];
   }
@@ -39,7 +41,7 @@ export function cookingIngredients(method: CookingMethod): ComboIngredient[] {
 
 // Vinaigrette préréglée : huile d'olive + vinaigre + moutarde.
 export const VINAIGRETTE: ComboIngredient[] = [
-  { foodId: "huile-olive", grams: 10 },
-  { foodId: "vinaigre", grams: 5 },
-  { foodId: "moutarde", grams: 5 },
+  { foodId: F.oliveOil, grams: 10 },
+  { foodId: F.vinegar, grams: 5 },
+  { foodId: F.mustard, grams: 5 },
 ];

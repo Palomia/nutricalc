@@ -290,6 +290,7 @@ export function App() {
                     }}
                     muscleTargets={result.report.muscleTargets}
                     filters={meals.filters}
+                    commonFoods={meals.commonFoods}
                     onAddSuggestedFood={meals.addSuggestedFood}
                   />
                 </>
