@@ -30,8 +30,13 @@ jobs:
       - name: POC Python (nix build lance pytest via doCheck)
         run: nix build .#default --print-build-logs
 
-      # Le web se construit avec pnpm dans le devShell : pas de fixed-output
-      # derivation Nix pour les deps npm (voir flake.nix / DESIGN.md).
+      # Builds the site as deployed; fails when pnpmDeps.hash is stale,
+      # printing the expected value.
+      - name: Web — nix build (artefact déployé)
+        run: nix build .#web --print-build-logs
+
+      # Also covers the day-to-day pnpm devShell path, which the Nix build
+      # above does not.
       - name: Web — install, test, build
         run: |
           nix develop --command bash -c '
