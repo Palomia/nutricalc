@@ -20,6 +20,8 @@ Outil de gestion des tâches. Tenu à jour au fil des livraisons.
 | T16 | Correctif lisibilité score leucine (287 % ARJ → sous-score 67 %) | 🔬 | ✅ | S | Cause identifiée : besoin *journalier* (~2,5 g/j) vs seuil anabolique *par repas* (2,5 g/repas), même chiffre + plafonnement + moyenne par repas. Reste à clarifier l'UI (distinguer « couverture journalière » et « atteinte du seuil par repas »). |
 | T3 | « Une meilleure … avec des exemples et des sources » | 🧭 | ⚠️ à préciser | ? | Intitulé ambigu : meilleure quoi (base ? interface ? explications ?) et quelles sources/exemples. À cadrer avant de lancer. |
 | T17 | Compléments alimentaires | ⬜ | ⚠️ « à la toute fin » | L | À comparer aux recommandations d'aliments non transformés qui « fit » bien. Volontairement repoussé. |
+| T19 | Voir les apports aux mailles aliment, plat et repas | ⬜ | ✅ | M | Recouvrement partiel : les macros par plat (`dishMacros`) et par repas (`mealMacros`) sont déjà affichées dans `MealPlanner.tsx`. Reste le détail à la maille ingrédient et, éventuellement, les AAE par niveau. |
+| T20 | Plats et repas standard préréglés (burger, pizza, gratin de courgette ; menu type BigMac) | ⬜ | ✅ | M | Bibliothèque d'aliments composés / repas préréglés. Proche de T13 (journée type) et T2 (bibliothèque de modèles) — réutiliser la persistance existante. |
 
 ## ✅ Fait
 
