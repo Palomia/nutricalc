@@ -165,15 +165,15 @@ describe("sous-score leucine : nombre de prises au seuil (§9)", () => {
     expect(sFive).toBe(1); // 5 prises au seuil / N=4 → plafonné à 100 %
   });
 
-  it("la cible N de prises dérive du besoin protéique, bornée à [3, 5]", () => {
+  it("la cible N de prises dérive du besoin protéique, bornée à [3, 7]", () => {
     // 3 prises au seuil dans tous les cas ; seul N (donc le score) change.
     const day: Day = { meals: [bigMeal("R1"), bigMeal("R2"), bigMeal("R3")] };
     const score = (proteinTargetG: number) =>
       analyzeMuscleProfile(day, targetsWith(proteinTargetG)).score.leucineScore;
     expect(score(110)).toBeCloseTo(3 / 3, 6); // round(110/35)=3 → N=3
-    expect(score(175)).toBeCloseTo(3 / 5, 6); // round(175/35)=5 → N=5
+    expect(score(200)).toBeCloseTo(3 / 6, 6); // round(200/35)=6 → N=6
     expect(score(70)).toBeCloseTo(3 / 3, 6); // round=2 → borné au plancher 3
-    expect(score(250)).toBeCloseTo(3 / 5, 6); // round=7 → borné au plafond 5
+    expect(score(280)).toBeCloseTo(3 / 7, 6); // round(280/35)=8 → borné au plafond 7
   });
 });
 

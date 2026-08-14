@@ -243,7 +243,7 @@ const LEUCINE_SUBSCORE_TIP: InfoTipContent = {
       heading: "Comment il est calculé",
       items: [
         "On compte les repas dont la leucine atteint ~2,5 g.",
-        "On divise par le nombre de prises anaboliques visées (dérivé du besoin protéique journalier, borné à 3-5).",
+        "On divise par le nombre de prises anaboliques visées (dérivé du besoin protéique journalier, borné à 3-7).",
         "Plafonné à 100 %, il pèse 20 % de la note finale.",
       ],
     },

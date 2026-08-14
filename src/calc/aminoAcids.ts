@@ -236,10 +236,10 @@ export function analyzeMuscleProfile(day: Day, targets: MuscleTargets): MuscleAn
     (m) => m.leucineG >= LEUCINE_THRESHOLDS.optimal,
   ).length;
   // Cible dynamique : ~35 g de protéines par prise « pleine » (milieu de la
-  // fenêtre 25-40 g), bornée à 3-5 prises anaboliques par jour (temp.txt §10).
+  // fenêtre 25-40 g), bornée à 3-7 prises anaboliques par jour (temp.txt §10).
   const targetAnabolicMeals = Math.max(
     3,
-    Math.min(5, Math.round(targets.proteinTargetG / 35)),
+    Math.min(7, Math.round(targets.proteinTargetG / 35)),
   );
   const leucineScore = clamp01(leucineMeals / targetAnabolicMeals);
   // Proximité à la cible calorique (sous comme sur-consommation pénalisent).
