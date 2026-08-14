@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  AMINO_ACID_KEYS,
   analyzeMuscleProfile,
   dayAminoAcids,
+  dishAminoAcids,
   ingredientAminoAcids,
   leucineLevel,
   limitingAminoAcid,
+  mealAminoAcids,
   aminoAcidCoverage,
   proteinDistribution,
   type MuscleTargets,
@@ -56,6 +59,34 @@ describe("apport en acides aminés", () => {
     const aa = ingredientAminoAcids({ food: apple, grams: 200 });
     expect(aa.leucine).toBe(0);
     expect(aa.lysine).toBe(0);
+  });
+
+  it("un plat somme ses ingrédients", () => {
+    const dish = {
+      name: "Poulet-riz",
+      ingredients: [
+        { food: chicken, grams: 100 }, // 30 g de protéines
+        { food: rice, grams: 150 }, // 4,35 g de protéines
+      ],
+    };
+    const aa = dishAminoAcids(dish);
+    expect(aa.leucine).toBeCloseTo(
+      AMINO_ACID_PROFILES.meat.leucine * 30 + AMINO_ACID_PROFILES.cereal.leucine * 4.35,
+      6,
+    );
+  });
+
+  it("un repas somme ses plats (agrégation par niveau)", () => {
+    const meal = {
+      name: "Déjeuner",
+      dishes: [dishOf(chicken, 100), dishOf(rice, 150)],
+    };
+    const viaMeal = mealAminoAcids(meal);
+    const viaDishes = meal.dishes.map(dishAminoAcids);
+    for (const k of AMINO_ACID_KEYS) {
+      const summed = viaDishes.reduce((s, d) => s + d[k], 0);
+      expect(viaMeal[k]).toBeCloseTo(summed, 6);
+    }
   });
 
   it("la journée somme les repas", () => {

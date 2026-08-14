@@ -16,6 +16,7 @@ import {
 } from "./calc/aminoAcids";
 import { suggestFoods, type FoodSuggestion } from "./calc/suggestions";
 import type { Food, FoodFilter } from "./calc/food";
+import { DayBreakdown } from "./DayBreakdown";
 
 // Cible de comparaison, en valeurs absolues journalières.
 export interface MacroGoal {
@@ -466,6 +467,8 @@ export function DayAnalysis(props: {
               </div>
             )}
           </div>
+
+          <DayBreakdown day={day} />
 
           {analysis && <MuscleAnalysisPanel analysis={analysis} />}
 
