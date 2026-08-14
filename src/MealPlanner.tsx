@@ -237,21 +237,21 @@ const LEUCINE_ANABOLIC_TIP: InfoTipContent = {
 // bas malgré un total journalier élevé.
 const LEUCINE_SUBSCORE_TIP: InfoTipContent = {
   intro:
-    "Ce sous-score mesure si CHAQUE prise atteint le seuil anabolique (~2,5 g de leucine), pas la couverture journalière.",
+    "Ce sous-score compte le NOMBRE de prises atteignant le seuil anabolique (~2,5 g de leucine), pas la couverture journalière.",
   sections: [
     {
       heading: "Comment il est calculé",
       items: [
-        "Par repas : leucine du repas ÷ 2,5 g, plafonné à 100 %.",
-        "Le sous-score est la moyenne de ces valeurs sur tous les repas.",
-        "Il pèse 20 % de la note finale.",
+        "On compte les repas dont la leucine atteint ~2,5 g.",
+        "On divise par le nombre de prises anaboliques visées (dérivé du besoin protéique journalier, borné à 3-5).",
+        "Plafonné à 100 %, il pèse 20 % de la note finale.",
       ],
     },
     {
       heading: "Pourquoi il peut rester bas",
       items: [
-        "Un total journalier élevé (ex. 287 % des besoins) ne suffit pas s'il est concentré sur peu de repas.",
-        "Répartir la leucine pour que chaque prise atteigne ~2,5 g relève ce sous-score.",
+        "Un total journalier élevé (ex. 287 % des besoins) ne suffit pas s'il est concentré sur peu de prises.",
+        "Répartir la leucine sur davantage de repas atteignant ~2,5 g relève ce sous-score.",
       ],
     },
   ],
@@ -383,7 +383,8 @@ function MuscleAnalysisPanel({ analysis }: { analysis: MuscleAnalysis }) {
             <p className="mt-1 text-[10px] text-slate-400">
               Couverture journalière = apport du jour ÷ besoin ; elle peut dépasser
               100 %. À ne pas confondre avec le sous-score « Leucine (seuil/repas) »
-              du score, calculé par repas et plafonné à 100 %.
+              du score, qui compte le nombre de prises atteignant ~2,5 g de leucine
+              (plafonné à 100 %).
             </p>
           </details>
         </div>
