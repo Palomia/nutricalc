@@ -228,13 +228,20 @@ export function analyzeMuscleProfile(day: Day, targets: MuscleTargets): MuscleAn
     targets.proteinTargetG > 0 ? clamp01(totals.proteinG / targets.proteinTargetG) : 0;
   // Plafonné par l'AA limitant (temp.txt §8) : sans protéine analysable → 0.
   const aaeScore = limiting ? clamp01(limiting.coverage) : 0;
-  // Moyenne des repas, cadrée sur le seuil « optimal » (2,5 g).
-  const leucineScore = distribution.meals.length
-    ? distribution.meals.reduce(
-        (s, m) => s + clamp01(m.leucineG / LEUCINE_THRESHOLDS.optimal),
-        0,
-      ) / distribution.meals.length
-    : 0;
+  // Sous-score leucine : c'est le NOMBRE de prises atteignant le seuil anabolique
+  // (≥ 2,5 g de leucine) qui compte, rapporté au nombre de prises anaboliques
+  // visées dans la journée — et non la proportion de repas au seuil (une moyenne
+  // de ratios avantagerait à tort une journée d'un seul bon repas).
+  const leucineMeals = distribution.meals.filter(
+    (m) => m.leucineG >= LEUCINE_THRESHOLDS.optimal,
+  ).length;
+  // Cible dynamique : ~35 g de protéines par prise « pleine » (milieu de la
+  // fenêtre 25-40 g), bornée à 3-7 prises anaboliques par jour (temp.txt §10).
+  const targetAnabolicMeals = Math.max(
+    3,
+    Math.min(7, Math.round(targets.proteinTargetG / 35)),
+  );
+  const leucineScore = clamp01(leucineMeals / targetAnabolicMeals);
   // Proximité à la cible calorique (sous comme sur-consommation pénalisent).
   const calorieScore =
     targets.energyTargetKcal > 0

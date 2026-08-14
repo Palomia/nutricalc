@@ -136,6 +136,47 @@ describe("pas de prime à l'origine animale (§10)", () => {
   });
 });
 
+describe("sous-score leucine : nombre de prises au seuil (§9)", () => {
+  // ~110 g de poulet → 33 g de protéines → 33 × 80 mg = 2,64 g de leucine (≥ 2,5 g).
+  const bigMeal = (n: string) => ({ name: n, dishes: [dishOf(chicken, 110)] });
+  // ~50 g de poulet → 15 g de protéines → 1,2 g de leucine (< 2,5 g).
+  const smallMeal = (n: string) => ({ name: n, dishes: [dishOf(chicken, 50)] });
+  const targetsWith = (proteinTargetG: number): MuscleTargets => ({
+    aminoAcids: aminoAcidTargets(70, 1.8),
+    proteinTargetG,
+    energyTargetKcal: 2500,
+  });
+
+  it("5 prises sur 6 au seuil scorent PLUS qu'une seule prise au seuil", () => {
+    // Cœur de la correction : c'est le NOMBRE de prises au seuil qui compte,
+    // pas la proportion (une moyenne de ratios ferait l'inverse).
+    const one: Day = { meals: [bigMeal("Unique")] };
+    const five: Day = {
+      meals: [
+        bigMeal("R1"), bigMeal("R2"), bigMeal("R3"),
+        bigMeal("R4"), bigMeal("R5"), smallMeal("R6"),
+      ],
+    };
+    const t = targetsWith(140); // N = round(140 / 35) = 4
+    const sOne = analyzeMuscleProfile(one, t).score.leucineScore;
+    const sFive = analyzeMuscleProfile(five, t).score.leucineScore;
+    expect(sFive).toBeGreaterThan(sOne);
+    expect(sOne).toBeCloseTo(1 / 4, 6); // 1 prise au seuil / N=4
+    expect(sFive).toBe(1); // 5 prises au seuil / N=4 → plafonné à 100 %
+  });
+
+  it("la cible N de prises dérive du besoin protéique, bornée à [3, 7]", () => {
+    // 3 prises au seuil dans tous les cas ; seul N (donc le score) change.
+    const day: Day = { meals: [bigMeal("R1"), bigMeal("R2"), bigMeal("R3")] };
+    const score = (proteinTargetG: number) =>
+      analyzeMuscleProfile(day, targetsWith(proteinTargetG)).score.leucineScore;
+    expect(score(110)).toBeCloseTo(3 / 3, 6); // round(110/35)=3 → N=3
+    expect(score(200)).toBeCloseTo(3 / 6, 6); // round(200/35)=6 → N=6
+    expect(score(70)).toBeCloseTo(3 / 3, 6); // round=2 → borné au plancher 3
+    expect(score(280)).toBeCloseTo(3 / 7, 6); // round(280/35)=8 → borné au plafond 7
+  });
+});
+
 describe("score de construction musculaire (§12)", () => {
   const targets = (): MuscleTargets => ({
     aminoAcids: aminoAcidTargets(70, 1.8),
