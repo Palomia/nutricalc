@@ -11,7 +11,7 @@
 // Toutes les valeurs sont INDICATIVES et pédagogiques (profil d'AAE INLINE porté
 // par chaque aliment FR) ; le moteur est pragmatique, pas une référence clinique.
 import type { AminoAcid, AminoAcidKey } from "./macros";
-import { dayMacros, mealMacros, type Day, type Ingredient, type Meal } from "./intake";
+import { dayMacros, mealMacros, type Day, type Dish, type Ingredient, type Meal } from "./intake";
 
 export const AMINO_ACID_KEYS: AminoAcidKey[] = [
   "histidine",
@@ -52,15 +52,21 @@ export function ingredientAminoAcids(i: Ingredient): AminoAcidAmounts {
   return out;
 }
 
-function allIngredients(meal: Meal): Ingredient[] {
-  return meal.dishes.flatMap((d) => d.ingredients);
+// Apport total en AAE d'un plat (somme de ses ingrédients).
+export function dishAminoAcids(dish: Dish): AminoAcidAmounts {
+  const out = zeroAminoAcids();
+  for (const i of dish.ingredients) {
+    const aa = ingredientAminoAcids(i);
+    for (const k of AMINO_ACID_KEYS) out[k] += aa[k];
+  }
+  return out;
 }
 
-// Apport total en AAE d'un repas (somme des ingrédients).
+// Apport total en AAE d'un repas (somme de ses plats).
 export function mealAminoAcids(meal: Meal): AminoAcidAmounts {
   const out = zeroAminoAcids();
-  for (const i of allIngredients(meal)) {
-    const aa = ingredientAminoAcids(i);
+  for (const d of meal.dishes) {
+    const aa = dishAminoAcids(d);
     for (const k of AMINO_ACID_KEYS) out[k] += aa[k];
   }
   return out;
