@@ -16,7 +16,12 @@ export type FoodCategory =
   | "Viandes, poissons, œufs"
   | "Produits laitiers"
   | "Fruits & légumes"
-  | "Matières grasses & oléagineux";
+  | "Matières grasses & oléagineux"
+  // Catégorie générique de repli pour les aliments de la base USDA (tâche #14)
+  // qui ne se rangent dans aucune des cinq catégories ci-dessus (boissons,
+  // sucreries, plats préparés, soupes, épices…). Aucun aliment curaté n'y est
+  // rangé : l'`<optgroup>` correspondant reste vide et masqué dans le sélecteur.
+  | "Autres";
 
 // Profil en acides aminés indispensables, exprimé en mg par g de protéine.
 // Approche pragmatique (temp.txt) : plutôt que de saisir chaque AAE par aliment,
@@ -54,6 +59,13 @@ export interface Food {
   // Découpage protéique (optionnel : absent pour les aliments à protéines
   // négligeables — huiles, fruits, légumes aqueux — dont les AAE ne comptent pas).
   aaProfile?: AminoAcidProfileKey;
+  // Profil d'AAE INLINE (mg d'AAE par g de protéine), calculé directement depuis
+  // les grammes d'acides aminés mesurés — utilisé par la base USDA (tâche #14),
+  // qui fournit le profil réel de chaque aliment plutôt qu'une clé de source.
+  // Quand il est présent, il PRIME sur `aaProfile` dans le calcul des AAE
+  // (cf. `ingredientAminoAcids`). Absent pour les aliments curatés (rattachés à
+  // une clé `aaProfile`) et pour les aliments USDA sans profil d'AA complet.
+  aaProfileValues?: AminoAcidProfile;
   // --- Attributs de régime alimentaire (tâche #7) ---
   // Végétarien : aucune chair animale (ni viande, ni poisson, ni fruits de
   // mer). Les œufs et les produits laitiers restent autorisés.
@@ -117,6 +129,7 @@ export const FOOD_CATEGORIES: FoodCategory[] = [
   "Produits laitiers",
   "Fruits & légumes",
   "Matières grasses & oléagineux",
+  "Autres",
 ];
 
 // Critères de filtrage par régime. Chaque champ est optionnel : quand il vaut

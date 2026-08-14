@@ -43,11 +43,18 @@ function ingredientProteinG(i: Ingredient): number {
 
 // mg d'AAE apportés par un ingrédient : profil de la source (mg/g de protéine)
 // × grammes de protéines. Aliment sans profil (protéines négligeables) → zéro.
+//
+// Deux formes de profil coexistent : `aaProfileValues` (valeurs INLINE calculées
+// depuis les grammes d'AA mesurés, cf. base USDA, tâche #14) PRIME sur la clé de
+// profil de source `aaProfile` (aliments curatés). Ainsi un aliment USDA utilise
+// son propre profil, sans passer par les schémas de référence de `food.ts`.
 export function ingredientAminoAcids(i: Ingredient): AminoAcidAmounts {
   const out = zeroAminoAcids();
   const proteinG = ingredientProteinG(i);
-  if (!i.food.aaProfile || proteinG <= 0) return out;
-  const profile = AMINO_ACID_PROFILES[i.food.aaProfile];
+  const profile =
+    i.food.aaProfileValues ??
+    (i.food.aaProfile ? AMINO_ACID_PROFILES[i.food.aaProfile] : undefined);
+  if (!profile || proteinG <= 0) return out;
   for (const k of AMINO_ACID_KEYS) out[k] = profile[k] * proteinG;
   return out;
 }

@@ -8,7 +8,14 @@
 // minimale (grammes de macro + kcal), pour être câblé dans App.tsx en une ligne
 // quelle que soit la manière dont la cible est calculée.
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FOODS, FOODS_BY_ID, FOOD_CATEGORIES, filterFoods, type FoodFilter } from "./calc/food";
+import { FOODS, FOODS_BY_ID, FOOD_CATEGORIES, filterFoods, type Food, type FoodFilter } from "./calc/food";
+import {
+  loadUsdaFoods,
+  searchUsdaFoods,
+  getUsdaFood,
+  registerUsdaFood,
+  isUsdaId,
+} from "./calc/usdaFoods";
 import {
   dayMacros,
   dishMacros,
@@ -80,6 +87,12 @@ function saveRaw(key: string, value: string): void {
 const round = (n: number) => Math.round(n);
 const one = (n: number) => Math.round(n * 10) / 10;
 
+// Résolution `foodId → Food` : base curatée d'abord, puis registre des aliments
+// USDA sélectionnés (tâche #14 ; ces derniers ne sont PAS dans `FOODS_BY_ID`).
+function resolveFood(id: string): Food | undefined {
+  return FOODS_BY_ID[id] ?? getUsdaFood(id);
+}
+
 // Conversion état d'édition → journée agrégeable par intake.ts.
 function toDay(meals: EMeal[]): Day {
   return {
@@ -90,8 +103,8 @@ function toDay(meals: EMeal[]): Day {
         ingredients: d.ingredients
           // La quantité saisie (dans son unité ménagère) est convertie en
           // grammes ici, pour qu'intake.ts reste une simple règle de trois.
-          .map((i) => ({ food: FOODS_BY_ID[i.foodId], grams: toGrams(i.quantity, i.unit) }))
-          .filter((i) => i.food !== undefined),
+          .map((i) => ({ food: resolveFood(i.foodId), grams: toGrams(i.quantity, i.unit) }))
+          .filter((i): i is { food: Food; grams: number } => i.food !== undefined),
       })),
     })),
   };
@@ -530,6 +543,100 @@ function CookingMenu({ onSelect }: { onSelect: (method: CookingMethod) => void }
   );
 }
 
+// Recherche par saisie dans la base USDA (tâche #14). La base (~3 Mo, 7 793
+// aliments) ne peut pas tenir dans un <select> : on propose une combobox à
+// autocomplétion, alimentée par un CHARGEMENT PARESSEUX (import dynamique →
+// chunk séparé) déclenché à la première ouverture. Les filtres de régime ne
+// sont volontairement PAS appliqués ici (régime USDA heuristique, cf.
+// usdaFoods.ts) pour ne pas masquer abusivement des résultats.
+function UsdaFoodSearch({ onSelect }: { onSelect: (food: Food) => void }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [foods, setFoods] = useState<Food[] | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  // Chargement paresseux : au premier affichage du panneau seulement.
+  useEffect(() => {
+    if (!open || foods !== null || loading) return;
+    let alive = true;
+    setLoading(true);
+    loadUsdaFoods()
+      .then((fs) => {
+        if (alive) setFoods(fs);
+      })
+      .finally(() => {
+        if (alive) setLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [open, foods, loading]);
+
+  const results = useMemo(
+    () => (foods ? searchUsdaFoods(foods, query, 30) : []),
+    [foods, query],
+  );
+
+  const choose = (food: Food) => {
+    onSelect(food);
+    setOpen(false);
+    setQuery("");
+  };
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="shrink-0 rounded border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50"
+        title="Rechercher un aliment dans la base USDA (7 793 aliments, noms en anglais)"
+      >
+        Base USDA
+      </button>
+      {open && (
+        <div className="absolute right-0 z-20 mt-1 w-80 rounded-lg border border-slate-200 bg-white p-2 shadow-lg">
+          <input
+            autoFocus
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Rechercher (nom en anglais)…"
+            className="w-full rounded border border-slate-300 px-2 py-1 text-sm focus:border-emerald-500 focus:outline-none"
+          />
+          <p className="mt-1 text-[10px] leading-snug text-slate-400">
+            Base USDA SR Legacy · noms en anglais · filtres de régime non appliqués
+          </p>
+          <div className="mt-1 max-h-64 overflow-auto">
+            {loading ? (
+              <p className="px-2 py-3 text-xs text-slate-400">Chargement de la base…</p>
+            ) : !query.trim() ? (
+              <p className="px-2 py-3 text-xs text-slate-400">Saisissez un nom d'aliment.</p>
+            ) : results.length === 0 ? (
+              <p className="px-2 py-3 text-xs text-slate-400">Aucun résultat.</p>
+            ) : (
+              <ul className="space-y-0.5">
+                {results.map((f) => (
+                  <li key={f.id}>
+                    <button
+                      type="button"
+                      onClick={() => choose(f)}
+                      className="w-full rounded px-2 py-1 text-left hover:bg-emerald-50"
+                    >
+                      <span className="block truncate text-sm text-slate-700">{f.name}</span>
+                      <span className="block text-[10px] tabular-nums text-slate-400">
+                        {round(f.kcalPer100g)} kcal · P {one(f.proteinPer100g)} /100 g · {f.category}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function MealPlanner({ target, muscleTargets }: { target?: MacroGoal; muscleTargets?: MuscleTargets }) {
   // Journée en cours restaurée depuis localStorage (état vide si absent/invalide).
   const [meals, setMeals] = useState<EMeal[]>(() => deserializeDay(loadRaw(DAY_KEY)));
@@ -719,6 +826,18 @@ export function MealPlanner({ target, muscleTargets }: { target?: MacroGoal; mus
       ),
     );
 
+  // Sélection d'un aliment USDA (tâche #14) : on mémorise son snapshot dans le
+  // registre (pour que `toDay`/l'agrégation le retrouve, y compris au rechargement)
+  // puis on pointe l'ingrédient dessus par son id.
+  const selectUsdaFood = (mealId: number, dishId: number, ingId: number, food: Food) => {
+    registerUsdaFood(food);
+    setIngredient(mealId, dishId, ingId, { foodId: food.id });
+  };
+
+  // Repli d'un ingrédient USDA vers le sélecteur curaté (premier aliment du filtre).
+  const revertToCurated = (mealId: number, dishId: number, ingId: number) =>
+    setIngredient(mealId, dishId, ingId, { foodId: (filteredFoods[0] ?? FOODS[0]).id });
+
   const setIngredient = (mealId: number, dishId: number, ingId: number, patch: Partial<EIngredient>) =>
     setMeals((ms) =>
       ms.map((m) =>
@@ -879,13 +998,36 @@ export function MealPlanner({ target, muscleTargets }: { target?: MacroGoal; mus
                         <div className="space-y-2">
                           {dish.ingredients.map((ing) => (
                             <div key={ing.id} className="flex items-center gap-2 text-sm">
-                              <select
-                                value={ing.foodId}
-                                onChange={(e) => setIngredient(meal.id, dish.id, ing.id, { foodId: e.target.value })}
-                                className="flex-1 rounded border border-slate-300 bg-white px-2 py-1 focus:border-emerald-500 focus:outline-none"
-                              >
-                                {foodOptions(ing.foodId)}
-                              </select>
+                              {isUsdaId(ing.foodId) ? (
+                                // Aliment USDA : le <select> curaté ne peut pas le
+                                // représenter → on affiche son libellé (EN) avec un
+                                // repli possible vers le sélecteur curaté.
+                                <div className="flex flex-1 items-center gap-1 rounded border border-slate-300 bg-white px-2 py-1">
+                                  <span className="truncate text-slate-700" title={getUsdaFood(ing.foodId)?.name}>
+                                    {getUsdaFood(ing.foodId)?.name ?? "Aliment USDA introuvable"}
+                                  </span>
+                                  <span className="shrink-0 rounded bg-slate-100 px-1 text-[10px] uppercase tracking-wide text-slate-500">
+                                    USDA
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => revertToCurated(meal.id, dish.id, ing.id)}
+                                    className="ml-auto shrink-0 rounded px-1 text-xs text-slate-400 hover:text-emerald-700"
+                                    title="Revenir au sélecteur d'aliments curatés"
+                                  >
+                                    ↩
+                                  </button>
+                                </div>
+                              ) : (
+                                <select
+                                  value={ing.foodId}
+                                  onChange={(e) => setIngredient(meal.id, dish.id, ing.id, { foodId: e.target.value })}
+                                  className="flex-1 rounded border border-slate-300 bg-white px-2 py-1 focus:border-emerald-500 focus:outline-none"
+                                >
+                                  {foodOptions(ing.foodId)}
+                                </select>
+                              )}
+                              <UsdaFoodSearch onSelect={(food) => selectUsdaFood(meal.id, dish.id, ing.id, food)} />
                               <input
                                 type="number"
                                 min={0}
@@ -991,6 +1133,9 @@ export function MealPlanner({ target, muscleTargets }: { target?: MacroGoal; mus
       <p className="mt-4 text-xs text-slate-400">
         Valeurs nutritionnelles indicatives (table CIQUAL/ANSES, pour 100 g ;
         acides aminés estimés par profil de source, temp.txt §5-7), à revalider.
+        La recherche « Base USDA » puise dans la base USDA SR Legacy (pour 100 g,
+        profil d'acides aminés réel) : noms en anglais, catégories et régime
+        (végétarien/vegan) déduits de façon heuristique, à titre indicatif.
         Analyse anabolique et scores : extrapolations produit, pas des
         recommandations officielles. Outil informatif — ne remplace pas un avis diététique.
       </p>
