@@ -30,14 +30,13 @@ jobs:
       - name: POC Python (nix build lance pytest via doCheck)
         run: nix build .#default --print-build-logs
 
-      # Construit le site tel qu'il est déployé (pnpm test + build via Nix).
-      # Échoue si `pnpmDeps.hash` n'a pas été regénéré après un changement de
-      # dépendances, en affichant le hash attendu.
+      # Builds the site as deployed; fails when pnpmDeps.hash is stale,
+      # printing the expected value.
       - name: Web — nix build (artefact déployé)
         run: nix build .#web --print-build-logs
 
-      # Vérifie en plus le parcours de dev quotidien (pnpm dans le devShell),
-      # que le build Nix ci-dessus ne couvre pas.
+      # Also covers the day-to-day pnpm devShell path, which the Nix build
+      # above does not.
       - name: Web — install, test, build
         run: |
           nix develop --command bash -c '

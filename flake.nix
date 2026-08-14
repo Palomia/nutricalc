@@ -42,12 +42,8 @@
             '';
           };
 
-          # Build de l'app web, servi tel quel par le module NixOS ci-dessous.
-          # `fetchPnpmDeps` est une fixed-output derivation : elle a le réseau,
-          # et transmet http(s)_proxy et NIX_SSL_CERT_FILE depuis l'appelant
-          # (cf. lib.fetchers.proxyImpureEnvVars). Derrière le proxy
-          # d'entreprise, pointer NIX_SSL_CERT_FILE sur un bundle contenant son
-          # CA ; `nix build .#default` (le POC) n'a lui besoin d'aucun réseau.
+          # The deployed site. Its deps come from a fixed-output derivation,
+          # which inherits the proxy vars and NIX_SSL_CERT_FILE from the caller.
           web = pkgs.stdenv.mkDerivation (finalAttrs: {
             pname = "nutricalc-web";
             version = "0.0.0";
@@ -59,9 +55,8 @@
               pkgs.pnpmConfigHook
             ];
 
-            # `fetcherVersion = 4` est imposé par pnpm >= 11 (nixpkgs rejette
-            # la 3). À regénérer quand les dépendances changent : le build
-            # échoue alors en affichant le hash attendu.
+            # fetcherVersion 4 is required by pnpm >= 11. Regenerate the hash
+            # when deps change; the build prints the expected value.
             pnpmDeps = pkgs.fetchPnpmDeps {
               inherit (finalAttrs) pname version src;
               fetcherVersion = 4;
@@ -81,9 +76,8 @@
         }
       );
 
-      # Déploiement du site statique : Caddy sert le `dist` construit
-      # ci-dessus. Le domaine est une option du consommateur, pour que le
-      # projet ne soit lié à aucun hébergeur en particulier.
+      # Static site deployment: Caddy serves the built dist. The domain is a
+      # consumer option so the project isn't bound to any one host.
       nixosModules.default =
         {
           config,
