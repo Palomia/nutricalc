@@ -14,12 +14,11 @@ Outil de gestion des tâches. Tenu à jour au fil des livraisons.
 
 | # | Tâche | Statut | Lançable | Effort | Notes |
 |---|-------|--------|----------|--------|-------|
-| T14 (câblage) | Câbler `foods.fr.json` comme base d'aliments **unique** (recherche + chargement paresseux) | 🚧 | ✅ | XL | Données livrées (PR #20). Câblage app en cours : remplacer la base curatée `FOODS`, recherche par saisie dans `MealEditor`, résolution + chargement paresseux (~4,5 Mo), remapper les presets (journée type, cuisson/vinaigrette, suggestions) vers des aliments USDA-FR. |
-| — | Revoir en profondeur l'algo (score musculaire + suggestions) | ⬜ | ✅ | L | Cohérence des pondérations, plafonds et seuils (par repas vs journalier), pertinence des critères. |
-| T1 | Solution de repli quand la BDD manque de macros/AAE | ⬜ | ⚠️ pertinent avec T14 | M | Prend son sens avec `foods.fr.json` (champs parfois absents : 4 760/7 793 ont un profil AAE complet). |
-| T19 | Voir les apports aux mailles aliment, plat et repas | ⬜ | ✅ | M | Recouvrement partiel : les macros par plat/repas sont déjà affichées. Reste le détail à la maille ingrédient et, éventuellement, les AAE par niveau. |
+| — | Corrections de l'algo (score musculaire + suggestions) | ⬜ | ✅ (débloqué post-#23) | L | Revue livrée (#22). À appliquer sur la **vraie donnée USDA** : P1 recalibrer l'AA limitant, P2 fusionner leucine + répartition & réactiver la fenêtre 25-40 g, P3 `calorieScore` conscient de l'objectif, réalignement des suggestions. |
+| T1 | Solution de repli quand la BDD manque de macros/AAE | ⬜ | ✅ | M | Partiellement traité par #23 (l'app tolère les profils AAE absents) ; reste à formaliser le repli et l'affichage des champs manquants (couplé aux corrections d'algo). |
 | T20 | Plats et repas standard préréglés (burger, pizza, gratin de courgette ; menu type BigMac) | ⬜ | ✅ | M | Bibliothèque d'aliments composés / repas préréglés. Proche de T13 (journée type) et T2 (bibliothèque de modèles) — réutiliser la persistance existante. |
-| T21 | Cahier des charges d'un projet datascience annexe : base d'aliments enrichie + impact planétaire | 🧭 | ⚠️ à cadrer (grilling) | M | Sortie attendue = base d'aliments bruts la plus précise (AAE, micronutriments, oligo-éléments, types de lipides…) + impact « limites planétaires » (surtout CO₂ et eau ; éventuellement saison / zone géographique). Le projet DS vit dans un **repo Git annexe**, itératif ; ici on rédige le **CDC** pour que sa sortie nous soit réellement exploitable dans nutricalc. |
+| T21 | Cahier des charges du projet datascience annexe (base enrichie + impact planétaire) | 🚧 | — | M | **Cadré** (grilling Q1–Q7). CDC en cours de rédaction → repo annexe **`Palomia/nutricalc-food-data`**, sync `/work/nutricalc-food-data`. Étude de sources : `docs/etude-sources-donnees-t21.md` (#25). |
+| T22 | Page « approfondie » exposant les champs Tier 1+2 | ⬜ | ⛔ dépend de la base DS (T21) | M | Données collectées mais non exploitées pour l'instant : DIAAS/digestibilité, sodium/sel, NOVA, fer héminique + inhibiteurs, index glycémique, cholestérol, vit. K, choline, B5/B7, fraction comestible/portion. À surfacer plus tard dans une page dédiée. |
 | T17 | Compléments alimentaires | ⬜ | ⚠️ « à la toute fin » | L | À comparer aux recommandations d'aliments non transformés qui « fit » bien. Volontairement repoussé. |
 
 ## ✅ Fait
@@ -39,6 +38,10 @@ Outil de gestion des tâches. Tenu à jour au fil des livraisons.
 | T16 | Score leucine : comptage de prises (N dynamique 3-7) + lisibilité | PR #17 |
 | T3 | Refonte en 3 onglets (Objectifs + fiches objectifs / Repas / Comptes rendus) | PR #19 |
 | T14 (données) | Base USDA traduite FR, app-ready (`data/foods.fr.json`) + build Python | PR #20 |
+| T14 (câblage) | `foods.fr.json` en base unique (chargement paresseux, registre persisté, recherche) | PR #23 |
+| T19 | Détail des apports par ingrédient / plat / repas | PR #24 |
+| — | Revue de fond de l'algo (analyse + propositions) | PR #22 |
+| — | Étude des sources de données (faisabilité CDC T21) | PR #25 |
 | — | Point d'info « leucine anabolique » (pédagogie des pics) | PR #14 |
 
 ## ❌ Abandonné
