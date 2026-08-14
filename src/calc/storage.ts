@@ -9,6 +9,9 @@
 // partagés entre le composant et la couche de persistance.
 
 import { isUnit, type Unit } from "./units";
+import type { AminoAcidKey } from "./macros";
+import type { AminoAcidProfile, Food, FoodCategory } from "./food";
+import { FOOD_CATEGORIES } from "./food";
 
 // --- Types d'édition (journée en cours) ---
 // Un ingrédient porte une `quantity` dans une `unit` ménagère (cf. `units.ts`) ;
@@ -27,6 +30,10 @@ export interface SavedMeal { name: string; dishes: SavedDish[] }
 export const DAY_KEY = "nutricalc:day";
 export const SAVED_MEALS_KEY = "nutricalc:savedMeals";
 export const SAVED_DISHES_KEY = "nutricalc:savedDishes";
+// Registre des aliments sélectionnés : chaque `foodId` référencé par la journée
+// ou la bibliothèque doit y avoir sa fiche `Food` (macros + profil d'AAE), pour
+// résoudre la journée SANS recharger les 4,5 Mo de foods.fr.json au démarrage.
+export const FOOD_REGISTRY_KEY = "nutricalc:foodRegistry";
 
 // --- Garde-fous de validation ---
 const isRecord = (v: unknown): v is Record<string, unknown> =>
@@ -134,6 +141,67 @@ export function toSavedDish(d: EDish): SavedDish {
 }
 export function toSavedMeal(m: EMeal): SavedMeal {
   return { name: m.name, dishes: m.dishes.map(toSavedDish) };
+}
+
+// --- Registre des aliments sélectionnés (persistance des fiches `Food`) ---
+
+// Les 9 clés du profil d'AAE (mg/g de protéine), pour valider `aaProfile`.
+const AA_KEYS: AminoAcidKey[] = [
+  "histidine", "isoleucine", "leucine", "lysine", "sulfur",
+  "aromatic", "threonine", "tryptophan", "valine",
+];
+
+const isBool = (v: unknown): v is boolean => typeof v === "boolean";
+
+// Valide un profil d'AAE : objet dont les 9 clés sont des nombres finis.
+function parseAaProfile(v: unknown): AminoAcidProfile | undefined {
+  if (!isRecord(v)) return undefined;
+  const out = {} as AminoAcidProfile;
+  for (const k of AA_KEYS) {
+    if (!isNum(v[k])) return undefined;
+    out[k] = v[k] as number;
+  }
+  return out;
+}
+
+// Parse une fiche `Food` persistée (garde-fous stricts : une entrée corrompue
+// est écartée plutôt que de fausser un calcul). `aaProfile` reste optionnel.
+export function parseFood(v: unknown): Food | null {
+  if (!isRecord(v)) return null;
+  if (!isStr(v.id) || !isStr(v.name) || !isStr(v.category)) return null;
+  if (!FOOD_CATEGORIES.includes(v.category as FoodCategory)) return null;
+  if (!isNum(v.kcalPer100g) || !isNum(v.proteinPer100g)) return null;
+  if (!isNum(v.lipidPer100g) || !isNum(v.carbPer100g)) return null;
+  if (!isBool(v.vegetarian) || !isBool(v.vegan) || !isBool(v.unprocessed)) return null;
+  const food: Food = {
+    id: v.id,
+    name: v.name,
+    category: v.category as FoodCategory,
+    kcalPer100g: v.kcalPer100g,
+    proteinPer100g: v.proteinPer100g,
+    lipidPer100g: v.lipidPer100g,
+    carbPer100g: v.carbPer100g,
+    vegetarian: v.vegetarian,
+    vegan: v.vegan,
+    unprocessed: v.unprocessed,
+  };
+  const aa = parseAaProfile(v.aaProfile);
+  if (aa) food.aaProfile = aa;
+  if (isStr(v.nameEn)) food.nameEn = v.nameEn;
+  if (isNum(v.fdcId)) food.fdcId = v.fdcId;
+  if (isBool(v.dietUncertain)) food.dietUncertain = v.dietUncertain;
+  return food;
+}
+
+// Sérialise le registre (tableau de fiches) — l'ordre n'a pas d'importance.
+export function serializeRegistry(foods: Food[]): string {
+  return JSON.stringify(foods);
+}
+
+// Restaure le registre : tableau de fiches `Food` valides (entrées corrompues
+// ignorées). `[]` si absent / JSON invalide.
+export function deserializeRegistry(raw: string | null): Food[] {
+  return parseArray(raw, parseFood);
 }
 
 // Insertion d'un modèle : régénère des ids frais via l'allocateur fourni.

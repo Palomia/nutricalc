@@ -8,6 +8,8 @@ import {
   nextIdFrom,
   serializeDay,
   serializeSaved,
+  serializeRegistry,
+  deserializeRegistry,
   toSavedMeal,
   type EMeal,
   type SavedMeal,
@@ -206,5 +208,43 @@ describe("storage — modèles enregistrés", () => {
     expect(dish.name).toBe("Tartines");
     expect(dish.ingredients).toEqual([{ id: 2, foodId: "pain", quantity: 80, unit: "gramme" }]);
     expect(dish.id).toBe(1);
+  });
+});
+
+describe("registre des aliments sélectionnés", () => {
+  const food = {
+    id: "usda-171477", name: "Poulet rôti", category: "Viandes, poissons, œufs" as const,
+    kcalPer100g: 165, proteinPer100g: 31, lipidPer100g: 3.6, carbPer100g: 0,
+    aaProfile: { histidine: 31, isoleucine: 52.8, leucine: 75, lysine: 84.9, sulfur: 40.5, aromatic: 73.4, threonine: 42.2, tryptophan: 11.7, valine: 49.6 },
+    vegetarian: false, vegan: false, unprocessed: false, nameEn: "Chicken breast", fdcId: 171477,
+  };
+
+  it("sérialise puis désérialise sans perte (round-trip)", () => {
+    const raw = serializeRegistry([food]);
+    const back = deserializeRegistry(raw);
+    expect(back).toHaveLength(1);
+    expect(back[0]).toEqual(food);
+  });
+
+  it("écarte les entrées corrompues (macros absentes, catégorie inconnue)", () => {
+    const raw = JSON.stringify([
+      food,
+      { id: "ko", name: "KO", category: "Inexistante", kcalPer100g: 1, proteinPer100g: 1, lipidPer100g: 0, carbPer100g: 0, vegetarian: true, vegan: true, unprocessed: true },
+      { id: "ko2", name: "KO2", category: "Autres", proteinPer100g: 1, lipidPer100g: 0, carbPer100g: 0, vegetarian: true, vegan: true, unprocessed: true },
+    ]);
+    const back = deserializeRegistry(raw);
+    expect(back.map((f) => f.id)).toEqual(["usda-171477"]);
+  });
+
+  it("tolère l'absence / le JSON invalide (→ [])", () => {
+    expect(deserializeRegistry(null)).toEqual([]);
+    expect(deserializeRegistry("{pas du json")).toEqual([]);
+  });
+
+  it("parseFood rejette un aaProfile incomplet mais garde l'aliment sans profil", () => {
+    const raw = JSON.stringify([{ ...food, aaProfile: { leucine: 75 } }]);
+    const back = deserializeRegistry(raw);
+    expect(back).toHaveLength(1);
+    expect(back[0].aaProfile).toBeUndefined();
   });
 });

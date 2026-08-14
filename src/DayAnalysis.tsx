@@ -15,7 +15,7 @@ import {
   type MuscleTargets,
 } from "./calc/aminoAcids";
 import { suggestFoods, type FoodSuggestion } from "./calc/suggestions";
-import type { FoodFilter } from "./calc/food";
+import type { Food, FoodFilter } from "./calc/food";
 
 // Cible de comparaison, en valeurs absolues journalières.
 export interface MacroGoal {
@@ -413,9 +413,11 @@ export function DayAnalysis(props: {
   target?: MacroGoal;
   muscleTargets?: MuscleTargets;
   filters: FoodFilter;
+  // Aliments candidats du moteur de suggestions (presets + registre).
+  commonFoods: Food[];
   onAddSuggestedFood: (foodId: string) => void;
 }) {
-  const { day, hasMeals, target, muscleTargets, filters, onAddSuggestedFood } = props;
+  const { day, hasMeals, target, muscleTargets, filters, commonFoods, onAddSuggestedFood } = props;
 
   const total = useMemo(() => dayMacros(day), [day]);
   const analysis = useMemo(
@@ -427,9 +429,9 @@ export function DayAnalysis(props: {
   const suggestions = useMemo(
     () =>
       muscleTargets
-        ? suggestFoods(day, muscleTargets, { filter: filters, macroGoal: target, limit: 4 })
+        ? suggestFoods(commonFoods, day, muscleTargets, { filter: filters, macroGoal: target, limit: 4 })
         : [],
-    [day, muscleTargets, filters, target],
+    [commonFoods, day, muscleTargets, filters, target],
   );
 
   return (

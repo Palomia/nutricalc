@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FOODS_BY_ID } from "./food";
+import { PRESET_FOODS_BY_ID } from "./presetFoods";
 import { buildPresetDay, PRESET_DAY } from "./presetDay";
 
 describe("presetDay — modèle de la journée type", () => {
@@ -33,7 +33,7 @@ describe("presetDay — modèle de la journée type", () => {
     for (const meal of PRESET_DAY) {
       for (const dish of meal.dishes) {
         for (const ing of dish.ingredients) {
-          expect(FOODS_BY_ID[ing.foodId], `foodId inconnu : ${ing.foodId}`).toBeDefined();
+          expect(PRESET_FOODS_BY_ID[ing.foodId], `foodId inconnu : ${ing.foodId}`).toBeDefined();
           expect(ing.quantity).toBeGreaterThan(0);
           expect(ing.unit).toBe("gramme");
         }

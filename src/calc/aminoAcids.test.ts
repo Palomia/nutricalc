@@ -17,13 +17,13 @@ import type { Day } from "./intake";
 const chicken: Food = {
   id: "poulet", name: "Poulet", category: "Viandes, poissons, œufs",
   kcalPer100g: 137, proteinPer100g: 30, lipidPer100g: 2, carbPer100g: 0,
-  aaProfile: "meat",
+  aaProfile: AMINO_ACID_PROFILES.meat,
   vegetarian: false, vegan: false, unprocessed: true,
 };
 const rice: Food = {
   id: "riz", name: "Riz", category: "Féculents & pains",
   kcalPer100g: 143, proteinPer100g: 2.9, lipidPer100g: 0.4, carbPer100g: 32,
-  aaProfile: "cereal",
+  aaProfile: AMINO_ACID_PROFILES.cereal,
   vegetarian: true, vegan: true, unprocessed: true,
 };
 const apple: Food = {
@@ -36,7 +36,7 @@ const apple: Food = {
 const tofu: Food = {
   id: "tofu", name: "Tofu", category: "Féculents & pains",
   kcalPer100g: 145, proteinPer100g: 30, lipidPer100g: 8, carbPer100g: 2,
-  aaProfile: "soy",
+  aaProfile: AMINO_ACID_PROFILES.soy,
   vegetarian: true, vegan: true, unprocessed: true,
 };
 

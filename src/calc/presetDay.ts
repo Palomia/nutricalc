@@ -11,9 +11,11 @@
 // et l'allocateur d'ids de `storage.ts`, si bien que l'insertion régénère des
 // clés React fraîches via le compteur du MealPlanner (aucune collision possible).
 //
-// Tous les `foodId` renvoient à des aliments réels de `FOODS` (cf. food.ts) ;
-// aucune donnée personnelle. Quantités en grammes indicatives.
+// Tous les `foodId` renvoient à des aliments réels de la base FR via
+// `PRESET_FOOD_IDS` (cf. presetFoods.ts, extraits de foods.fr.json) ; aucune
+// donnée personnelle. Quantités en grammes indicatives.
 import { fromSavedMeal, type EMeal, type SavedMeal } from "./storage";
+import { PRESET_FOOD_IDS as F } from "./presetFoods";
 
 // Modèle de la journée type. Sert de source de vérité aux tests et au builder.
 export const PRESET_DAY: SavedMeal[] = [
@@ -23,9 +25,9 @@ export const PRESET_DAY: SavedMeal[] = [
       {
         name: "Bol du matin",
         ingredients: [
-          { foodId: "pain-baguette", quantity: 60, unit: "gramme" },
-          { foodId: "yaourt-nature", quantity: 125, unit: "gramme" },
-          { foodId: "banane", quantity: 120, unit: "gramme" },
+          { foodId: F.bread, quantity: 60, unit: "gramme" },
+          { foodId: F.yogurt, quantity: 125, unit: "gramme" },
+          { foodId: F.banana, quantity: 120, unit: "gramme" },
         ],
       },
     ],
@@ -36,21 +38,21 @@ export const PRESET_DAY: SavedMeal[] = [
       {
         name: "Entrée",
         ingredients: [
-          { foodId: "tomate", quantity: 150, unit: "gramme" },
-          { foodId: "huile-olive", quantity: 5, unit: "gramme" },
+          { foodId: F.tomato, quantity: 150, unit: "gramme" },
+          { foodId: F.oliveOil, quantity: 5, unit: "gramme" },
         ],
       },
       {
         name: "Plat",
         ingredients: [
-          { foodId: "poulet-blanc-cuit", quantity: 150, unit: "gramme" },
-          { foodId: "riz-blanc-cuit", quantity: 150, unit: "gramme" },
-          { foodId: "brocoli-cuit", quantity: 100, unit: "gramme" },
+          { foodId: F.chicken, quantity: 150, unit: "gramme" },
+          { foodId: F.rice, quantity: 150, unit: "gramme" },
+          { foodId: F.broccoli, quantity: 100, unit: "gramme" },
         ],
       },
       {
         name: "Dessert",
-        ingredients: [{ foodId: "pomme", quantity: 150, unit: "gramme" }],
+        ingredients: [{ foodId: F.apple, quantity: 150, unit: "gramme" }],
       },
     ],
   },
@@ -60,8 +62,8 @@ export const PRESET_DAY: SavedMeal[] = [
       {
         name: "Collation",
         ingredients: [
-          { foodId: "yaourt-nature", quantity: 125, unit: "gramme" },
-          { foodId: "amandes", quantity: 20, unit: "gramme" },
+          { foodId: F.yogurt, quantity: 125, unit: "gramme" },
+          { foodId: F.almonds, quantity: 20, unit: "gramme" },
         ],
       },
     ],
@@ -72,21 +74,21 @@ export const PRESET_DAY: SavedMeal[] = [
       {
         name: "Entrée",
         ingredients: [
-          { foodId: "lentilles-cuites", quantity: 100, unit: "gramme" },
-          { foodId: "tomate", quantity: 100, unit: "gramme" },
+          { foodId: F.lentils, quantity: 100, unit: "gramme" },
+          { foodId: F.tomato, quantity: 100, unit: "gramme" },
         ],
       },
       {
         name: "Plat",
         ingredients: [
-          { foodId: "saumon-cuit", quantity: 130, unit: "gramme" },
-          { foodId: "pomme-de-terre-cuite", quantity: 200, unit: "gramme" },
-          { foodId: "brocoli-cuit", quantity: 120, unit: "gramme" },
+          { foodId: F.salmon, quantity: 130, unit: "gramme" },
+          { foodId: F.potato, quantity: 200, unit: "gramme" },
+          { foodId: F.broccoli, quantity: 120, unit: "gramme" },
         ],
       },
       {
         name: "Dessert",
-        ingredients: [{ foodId: "yaourt-nature", quantity: 125, unit: "gramme" }],
+        ingredients: [{ foodId: F.yogurt, quantity: 125, unit: "gramme" }],
       },
     ],
   },
