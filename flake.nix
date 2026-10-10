@@ -60,6 +60,8 @@
             pnpmDeps = pkgs.fetchPnpmDeps {
               inherit (finalAttrs) pname version src;
               fetcherVersion = 4;
+              # pnpm 12.7+ skips foreign-platform deps under --force; drop once nixpkgs has 8b03ce07d6162
+              prePnpmInstall = "export pnpm_config_force_ignores_platform=true";
               hash = "sha256-OZ81GAQ1KD2wDashaSfK56QQ4wd+cY/Y5wzUAEXMHWc=";
             };
 
